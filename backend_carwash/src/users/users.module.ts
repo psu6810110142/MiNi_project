@@ -1,0 +1,14 @@
+// src/users/users.module.ts
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { UsersService } from './user.service';
+import { UsersController } from './user.controller';
+import { User } from '../carwash_category/entities/carwash_category.entity';
+
+@Module({
+  imports: [TypeOrmModule.forFeature([User])],
+  controllers: [UsersController],
+  providers: [UsersService],
+  exports: [UsersService], // <--- ต้องมีบรรทัดนี้!
+})
+export class UsersModule {}
