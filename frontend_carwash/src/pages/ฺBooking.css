@@ -1,0 +1,36 @@
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #1e293b;
+  margin-bottom: 20px;
+  font-size: 1.25rem;
+}
+
+/* Progress Bar */
+.progress-bar { display: flex; justify-content: space-between; margin-bottom: 30px; position: relative; padding: 0 20px; }
+.step-item { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+.step-circle { width: 35px; height: 35px; border-radius: 50%; background: #e2e8f0; color: #64748b; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 2; transition: 0.3s; }
+.step-circle.active { background: #2563eb; color: white; box-shadow: 0 0 0 4px #dbeafe; }
+.step-line { position: absolute; top: 17px; left: 50%; width: 100%; height: 3px; background: #e2e8f0; z-index: 1; }
+.step-line.filled { background: #2563eb; }
+
+/* Selection Cards */
+.grid-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+.card-select { border: 2px solid #e2e8f0; border-radius: 12px; padding: 20px 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 10px; transition: 0.2s; text-align: center; }
+.card-select:hover { border-color: #93c5fd; }
+.card-select.selected { border-color: #2563eb; background-color: #eff6ff; color: #2563eb; }
+
+/* Service Items */
+.service-item { border: 2px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+.service-item.selected { border-color: #2563eb; background-color: #eff6ff; }
+
+/* Time Grid */
+.time-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.time-btn { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; cursor: pointer; }
+.time-btn.selected { background-color: #2563eb; color: white; border-color: #2563eb; }
+
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; margin-bottom: 5px; color: #475569; }
+
+.footer { display: flex; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; }

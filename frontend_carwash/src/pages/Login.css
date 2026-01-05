@@ -1,0 +1,128 @@
+/* --- src/pages/Login.css (แก้ไขสีตัวอักษรแล้ว) --- */
+
+.login-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* จัดให้อยู่กึ่งกลางความสูงของหน้าจอแอป */
+  min-height: 80vh; 
+  padding: 20px;
+}
+
+.login-card {
+  width: 100%;
+  text-align: center;
+  /* พื้นหลังเป็นสีขาวหรือโปร่งใสตาม Container หลัก */
+}
+
+.login-brand {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #2563eb; /* สีน้ำเงินสำหรับโลโก้ */
+  margin-bottom: 10px;
+}
+
+.login-subtitle {
+  color: #64748b; /* [แก้ไข] สีเทาเข้มสำหรับคำโปรย */
+  margin-bottom: 40px;
+  font-size: 1rem;
+}
+
+/* --- ส่วนสำคัญ: จัดการสี Input และ Label --- */
+.input-group {
+  position: relative;
+  margin-bottom: 25px;
+  text-align: left;
+}
+
+.input-label {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #334155; /* [แก้ไขสำคัญ] เปลี่ยนสีหัวข้อให้เป็นสีเทาเข้ม */
+  margin-bottom: 8px;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.input-icon-left {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8; /* สีไอคอนเทา */
+  pointer-events: none;
+}
+
+.input-modern {
+  width: 100%;
+  padding: 14px 14px 14px 45px; /* เว้นซ้ายไว้ใส่ไอคอน */
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  font-size: 1rem;
+  background-color: #f8fafc; /* พื้นหลังช่องกรอกสีเทาอ่อน */
+  color: #0f172a; /* [แก้ไขสำคัญ] สีตัวอักษรเวลาพิมพ์ ต้องเป็นสีเข้มเกือบดำ */
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.input-modern:focus {
+  outline: none;
+  border-color: #2563eb;
+  background-color: white;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.input-modern::placeholder {
+  color: #cbd5e1; /* สี Placeholder จางๆ */
+}
+
+/* ปุ่มต่างๆ */
+.btn-login {
+  width: 100%;
+  padding: 14px;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 10px;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+}
+
+.btn-login:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: #64748b; /* สีปุ่มกลับ เป็นสีเทาเข้ม */
+  margin-top: 20px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.btn-text:hover {
+  color: #1e293b;
+  text-decoration: underline;
+}
+
+.error-msg {
+  background-color: #fef2f2;
+  color: #ef4444;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  border: 1px solid #fee2e2;
+}

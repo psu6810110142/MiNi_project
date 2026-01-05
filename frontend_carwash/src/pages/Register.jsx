@@ -1,0 +1,186 @@
+import React, { useState } from 'react';
+import { User, Lock, Phone, UserPlus, ChevronLeft, Sparkles, Mail } from 'lucide-react';
+
+const Register = ({ onBack }) => {
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+    confirmPassword: '',
+    fullName: '',
+    tel: ''
+  });
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (formData.password !== formData.confirmPassword) {
+      alert("รหัสผ่านไม่ตรงกันครับ");
+      return;
+    }
+    // จำลองการสมัครสมาชิก
+    alert(`สมัครสมาชิกสำเร็จ! ยินดีต้อนรับคุณ ${formData.fullName}`);
+    onBack(); // กลับไปหน้า Login หรือ Home
+  };
+
+  return (
+    <div className="register-wrapper">
+      {/* --- CSS Styles (ฝังไว้ในนี้เลย) --- */}
+      <style>{`
+        .register-wrapper { min-height: 100vh; background-color: #f8fafc; font-family: 'Prompt', sans-serif; padding-bottom: 40px; }
+        
+        /* Header ส่วนบน */
+        .reg-header { background: white; padding: 20px; position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
+        .btn-back-icon { background: #f1f5f9; border: none; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #334155; cursor: pointer; transition: 0.2s; }
+        .btn-back-icon:hover { background: #e2e8f0; }
+        .reg-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin: 0; }
+        .placeholder-box { width: 40px; } /* ดัน Title ให้อยู่ตรงกลาง */
+
+        /* Content Card */
+        .reg-content { padding: 30px 25px; max-width: 500px; margin: 0 auto; }
+        
+        .welcome-text h2 { font-size: 1.8rem; font-weight: 800; color: #1e3a8a; margin: 0 0 10px; }
+        .welcome-text p { color: #64748b; margin: 0 0 30px; font-size: 0.95rem; }
+
+        /* Input Fields */
+        .reg-form-group { margin-bottom: 20px; }
+        .reg-label { display: block; font-size: 0.9rem; font-weight: 600; color: #334155; margin-bottom: 8px; }
+        .reg-input-wrapper { position: relative; }
+        .reg-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+        
+        .reg-input { 
+          width: 100%; 
+          padding: 14px 14px 14px 45px; 
+          border: 1px solid #cbd5e1; 
+          border-radius: 14px; 
+          font-size: 1rem; 
+          background: white; 
+          color: #0f172a; 
+          transition: 0.2s; 
+          box-sizing: border-box;
+        }
+        .reg-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
+
+        /* Button */
+        .btn-register { 
+          width: 100%; 
+          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); 
+          color: white; 
+          border: none; 
+          padding: 16px; 
+          border-radius: 50px; 
+          font-size: 1.1rem; 
+          font-weight: 700; 
+          cursor: pointer; 
+          box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.4); 
+          margin-top: 20px; 
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          transition: transform 0.2s;
+        }
+        .btn-register:hover { transform: translateY(-2px); box-shadow: 0 15px 25px -5px rgba(37, 99, 235, 0.5); }
+
+        /* Footer Link */
+        .login-link { text-align: center; margin-top: 25px; font-size: 0.95rem; color: #64748b; }
+        .login-link button { background: none; border: none; color: #2563eb; font-weight: 700; cursor: pointer; font-size: 0.95rem; margin-left: 5px; }
+        .login-link button:hover { text-decoration: underline; }
+      `}</style>
+
+      {/* --- JSX Content --- */}
+      
+      {/* Navbar แบบง่าย พร้อมปุ่มย้อนกลับ */}
+      <div className="reg-header">
+        <button onClick={onBack} className="btn-back-icon">
+          <ChevronLeft size={24} />
+        </button>
+        <h1 className="reg-title">สมัครสมาชิก</h1>
+        <div className="placeholder-box"></div>
+      </div>
+
+      <div className="reg-content">
+        <div className="welcome-text">
+          <h2>เริ่มต้นใช้งาน <span style={{color:'#2563eb'}}>CleanWash</span></h2>
+          <p>กรอกข้อมูลเพื่อสร้างบัญชีใหม่ของคุณ</p>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          {/* ชื่อ-นามสกุล */}
+          <div className="reg-form-group">
+            <label className="reg-label">ชื่อ-นามสกุล</label>
+            <div className="reg-input-wrapper">
+              <UserPlus size={20} className="reg-icon"/>
+              <input 
+                type="text" name="fullName" className="reg-input" placeholder="สมชาย ใจดี"
+                value={formData.fullName} onChange={handleChange} required
+              />
+            </div>
+          </div>
+
+          {/* เบอร์โทรศัพท์ */}
+          <div className="reg-form-group">
+            <label className="reg-label">เบอร์โทรศัพท์</label>
+            <div className="reg-input-wrapper">
+              <Phone size={20} className="reg-icon"/>
+              <input 
+                type="tel" name="tel" className="reg-input" placeholder="08x-xxx-xxxx"
+                value={formData.tel} onChange={handleChange} required
+              />
+            </div>
+          </div>
+
+          {/* ชื่อผู้ใช้ */}
+          <div className="reg-form-group">
+            <label className="reg-label">ชื่อผู้ใช้งาน (Username)</label>
+            <div className="reg-input-wrapper">
+              <User size={20} className="reg-icon"/>
+              <input 
+                type="text" name="username" className="reg-input" placeholder="ตั้งชื่อผู้ใช้ของคุณ"
+                value={formData.username} onChange={handleChange} required
+              />
+            </div>
+          </div>
+
+          {/* รหัสผ่าน */}
+          <div className="reg-form-group">
+            <label className="reg-label">รหัสผ่าน</label>
+            <div className="reg-input-wrapper">
+              <Lock size={20} className="reg-icon"/>
+              <input 
+                type="password" name="password" className="reg-input" placeholder="อย่างน้อย 6 ตัวอักษร"
+                value={formData.password} onChange={handleChange} required
+              />
+            </div>
+          </div>
+
+          {/* ยืนยันรหัสผ่าน */}
+          <div className="reg-form-group">
+            <label className="reg-label">ยืนยันรหัสผ่าน</label>
+            <div className="reg-input-wrapper">
+              <Lock size={20} className="reg-icon" style={{color: formData.confirmPassword && formData.password !== formData.confirmPassword ? '#ef4444' : '#94a3b8'}}/>
+              <input 
+                type="password" name="confirmPassword" className="reg-input" placeholder="กรอกรหัสผ่านอีกครั้ง"
+                value={formData.confirmPassword} onChange={handleChange} required
+                style={{borderColor: formData.confirmPassword && formData.password !== formData.confirmPassword ? '#ef4444' : ''}}
+              />
+            </div>
+            {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                <span style={{color:'#ef4444', fontSize:'0.8rem', marginTop:'5px', display:'block'}}>* รหัสผ่านไม่ตรงกัน</span>
+            )}
+          </div>
+
+          <button type="submit" className="btn-register">
+            ลงทะเบียนทันที <Sparkles size={20} />
+          </button>
+        </form>
+
+        <div className="login-link">
+          มีบัญชีอยู่แล้ว? 
+          <button onClick={onBack}>เข้าสู่ระบบ</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Register;
