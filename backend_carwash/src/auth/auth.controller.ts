@@ -1,34 +1,31 @@
-import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
+// src/auth/auth.controller.ts
+
+import { Controller, Post, Body, UnauthorizedException, Get, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/user.service';
+import { AuthGuard } from '@nestjs/passport'; // ✅ 1. เพิ่ม import นี้
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly usersService: UsersService, // ✅ Inject เข้ามาเพื่อใช้ตอน Register
+    private readonly usersService: UsersService,
   ) {}
 
-  // ล็อกอิน
+  // ล็อกอิน (เหมือนเดิม)
   @Post('login')
   async login(@Body() body) {
-    // 1. ส่งไปตรวจรหัสผ่านก่อน
     const user = await this.authService.validateUser(body.username, body.password);
-    
     if (!user) {
       throw new UnauthorizedException('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
     }
-
-    // 2. ถ้าผ่าน ส่งไปทำ Token
     return this.authService.login(user);
   }
 
-  // สมัครสมาชิก
+  // สมัครสมาชิก (เหมือนเดิม)
   @Post('register')
   async register(@Body() body) {
-    // ✅ เรียก UsersService ให้บันทึกลง DB จริงๆ
     const newUser = await this.usersService.create(body);
-    
     return { 
       message: 'สมัครสมาชิกสำเร็จ', 
       user: { 
@@ -36,5 +33,18 @@ export class AuthController {
           username: newUser.username 
       } 
     }; 
+  }
+
+  // 👇 3. เพิ่ม API สำหรับดึงข้อมูลส่วนตัว (Profile)
+  @UseGuards(AuthGuard('jwt')) // ต้องมี Token ถึงจะเข้าได้
+  @Get('profile')
+  async getProfile(@Request() req) {
+    // req.user.userId มาจาก Token ที่เราแกะออกมาใน JwtStrategy
+    console.log("👤 User ID ที่ขอข้อมูล:", req.user.userId);
+    
+    // ไปดึงข้อมูลสดๆ จาก DB
+    const user = await this.usersService.findById(req.user.userId);
+    
+    return user; // ส่งกลับไปให้หน้าบ้าน (React)
   }
 }

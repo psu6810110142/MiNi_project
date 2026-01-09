@@ -3,21 +3,16 @@ import HomePage from './pages/HomePage';
 import Login from './pages/Loginpage.jsx';
 import Register from './pages/Register';
 import Booking from './pages/Booking';
-import HistoryPage from './pages/History.jsx';
+import HistoryPage from './pages/History.jsx'; 
 import './App.css';
-
-// ❌ ลบ function App() ตัวแรกที่เป็น BrowserRouter ทิ้งไปเลยครับ
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
-  // สร้างตัวแปรเก็บข้อมูล user
   const [user, setUser] = useState(null);
 
-  // เช็คตอนเริ่มเข้าเว็บว่าเคยล็อกอินค้างไว้ไหม
   useEffect(() => {
-    const token = localStorage.getItem('token'); // หรือ 'access_token' เช็คชื่อ key ให้ตรงกับตอน login นะครับ
-    const savedUsername = localStorage.getItem('username'); 
-    
+    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+    const savedUsername = localStorage.getItem('username');
     if (token && savedUsername) {
       setUser({ username: savedUsername });
     }
@@ -28,16 +23,15 @@ function App() {
     window.scrollTo(0, 0);
   };
 
-  // ฟังก์ชันเมื่อ Login สำเร็จ
   const handleLoginSuccess = (username) => {
     localStorage.setItem('username', username);
     setUser({ username });
     navigate('home');
   };
 
-  // ฟังก์ชัน Logout
   const handleLogout = () => {
-    localStorage.removeItem('access_token'); // ตรวจสอบว่าใช้ 'token' หรือ 'access_token'
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('token');
     localStorage.removeItem('username');
     setUser(null);
     navigate('login');
@@ -45,43 +39,44 @@ function App() {
 
   return (
     <div className="container">
-      {/* --- หน้า Home --- */}
       {currentPage === 'home' && (
-        <HomePage 
-          navigate={navigate} 
-          user={user}            
-          onLogout={handleLogout} 
-        />
+        <HomePage navigate={navigate} user={user} onLogout={handleLogout} />
       )}
       
-      {/* --- หน้า Login --- */}
       {currentPage === 'login' && (
-        <Login 
-          onBack={() => navigate('home')} 
-          onLoginSuccess={handleLoginSuccess} 
-        />
+        <Login onBack={() => navigate('home')} onLoginSuccess={handleLoginSuccess} />
       )}
       
-      {/* --- หน้า Register --- */}
       {currentPage === 'register' && (
         <Register onBack={() => navigate('login')} />
       )}
       
-      {/* --- หน้า Booking --- */}
+      {/* ✅ Booking ส่ง onBack ให้แล้ว ปุ่ม Home จะกดได้ */}
       {currentPage === 'booking' && (
         <Booking onBack={() => navigate('home')} />
       )}
 
-      {/* --- ✅ 2. เพิ่มหน้า History ตรงนี้ --- */}
       {currentPage === 'history' && (
-        <div>
-            {/* ปุ่มย้อนกลับ (เพราะ HistoryPage ที่ให้ไปอาจจะไม่มีปุ่ม Back) */}
-            <button 
-                onClick={() => navigate('home')}
-                style={{ margin: '20px', padding: '10px', cursor: 'pointer' }}
-            >
-                ⬅ ย้อนกลับหน้าหลัก
-            </button>
+        <div style={{ padding: '20px', maxWidth: '500px', margin: '0 auto' }}>
+            {/* ✅ ย้ายปุ่มไปขวาบน (Flex End) ตามลูกศรที่วาดมา */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+                <button 
+                    onClick={() => navigate('home')}
+                    style={{ 
+                        padding: '8px 16px', 
+                        cursor: 'pointer', 
+                        border: '1px solid #ddd',
+                        borderRadius: '20px',
+                        background: 'white',
+                        fontWeight: '600',
+                        color: '#555',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                    }}
+                >
+                    ⬅ ย้อนกลับหน้าหลัก
+                </button>
+            </div>
+            
             <HistoryPage />
         </div>
       )}

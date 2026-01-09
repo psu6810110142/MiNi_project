@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Car, Truck, CheckCircle, ChevronRight, ChevronLeft, MapPin, Calendar, Home } from 'lucide-react';
+import { Car, Truck, CheckCircle, ChevronRight, ChevronLeft, MapPin, Calendar, Home, User as UserIcon, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-// --- Mock Data ---
+
+// --- Mock Data (เหมือนเดิม) ---
 const CAR_TYPES = [
     { id: 1, label: 'S/M', desc: 'รถเก๋งเล็ก-กลาง', icon: <Car size={32} /> },
     { id: 2, label: 'L/SUV', desc: 'รถเก๋งใหญ่-SUV', icon: <Car size={40} /> },
@@ -17,51 +18,41 @@ const SERVICES = [
 
 const TIME_SLOTS = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'];
 
-const Booking = ({ user }) => {
-    const navigate = useNavigate();
+const Booking = ({ onBack }) => {
+    
     const [step, setStep] = useState(1);
-
-    // 1. ปรับ State: ตัด Name/Tel ออก เพิ่ม Note (สิ่งที่ต้องการเพิ่มเติม)
+    const [customerProfile, setCustomerProfile] = useState(null);
     const [formData, setFormData] = useState({
-        carType: null,
-        service: null,
-        date: '',
-        time: '',
-        plate: '',
-        note: ''
+        carType: '', service: '', date: '', time: '', plate: '', note: ''
     });
-
     const [isSubmitted, setIsSubmitted] = useState(false);
-    const [bookingSummary, setBookingSummary] = useState(null); // เก็บข้อมูลไว้โชว์หน้าสรุป
+    const [bookingSummary, setBookingSummary] = useState(null);
 
     const updateData = (key, value) => setFormData({ ...formData, [key]: value });
-
-    // Helpers สำหรับดึงชื่อมาโชว์
     const getCarLabel = (id) => CAR_TYPES.find(c => c.id === id)?.label || '-';
     const getServiceName = (id) => SERVICES.find(s => s.id === id)?.name || '-';
 
+    useEffect(() => {
+        const fetchProfile = async () => {
+            const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+            if (!token) return;
+            try {
+                const response = await fetch('http://localhost:3000/auth/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    setCustomerProfile(await response.json());
+                }
+            } catch (err) { console.error(err); }
+        };
+        fetchProfile();
+    }, []);
 
     const handleSubmitBooking = async () => {
         try {
             let token = localStorage.getItem('access_token');
+            if (!token) { alert('กรุณาล็อกอินใหม่'); return; }
 
-            // 🔥 SUPER CLEANER: บังคับเอาเฉพาะตัวอักษรภาษาอังกฤษ, ตัวเลข, จุด(.), ขีด(-) และ Underscore(_) เท่านั้น
-            // สิ่งแปลกปลอมอื่นๆ เช่น ช่องว่าง, ฟันหนู, หรือตัวอักษรล่องหน จะถูกดีดออกหมด
-            if (token) {
-                token = token.replace(/[^a-zA-Z0-9._-]/g, '');
-            }
-
-            // เช็กอีกที ถ้าไม่มี Token หรือ Token สั้นผิดปกติ ให้ดีดกลับ
-            if (!token || token.length < 10) {
-                alert('ไม่พบ Token หรือ Token ไม่สมบูรณ์ กรุณาล็อกอินใหม่');
-                return;
-            }
-
-            // 🕵️‍♂️ Debug ดูสิ่งที่ส่งไปจริงๆ
-            console.log("🚀 FINAL TOKEN being sent:", token);
-            console.log("📦 HEADER:", `Bearer ${token}`);
-
-            // 2. เตรียมข้อมูล (Payload)
             const selectedService = SERVICES.find(s => s.id === formData.service);
             const startDateTime = new Date(`${formData.date}T${formData.time}:00`);
             const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
@@ -73,127 +64,86 @@ const Booking = ({ user }) => {
                 endTime: endDateTime.toISOString(),
                 totalPrice: selectedService ? selectedService.price : 0,
                 plateNumber: formData.plate,
-                additionalInfo: formData.note // ส่ง note ไปด้วย
+                additionalInfo: formData.note
             };
 
-            console.log('Sending Payload:', payload);
-
-            // 3. ยิง API
             const response = await fetch('http://localhost:3000/carwash-category/booking', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // ✅ ต้องมีเว้นวรรค 1 เคาะ ระหว่าง Bearer กับ Token
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(payload)
             });
 
             if (response.ok) {
-                const result = await response.json();
-                console.log('Success:', result);
-
-                // บันทึกข้อมูลเพื่อโชว์หน้าสรุป
                 setBookingSummary({
                     ...payload,
                     carLabel: getCarLabel(formData.carType),
                     serviceName: getServiceName(formData.service),
                     displayDate: formData.date,
                     displayTime: formData.time,
-                    totalPrice: selectedService ? selectedService.price : 0
+                    totalPrice: selectedService ? selectedService.price : 0,
+                    customerName: customerProfile?.fullName || customerProfile?.username,
+                    customerTel: customerProfile?.phoneNumber || '-'
                 });
-
                 setIsSubmitted(true);
             } else {
-                const errorData = await response.json();
-                // ถ้า Backend ตอบกลับว่า 401 (Unauthorized) แปลว่า Token หมดอายุ หรือ ผิด
-                if (response.status === 401) {
-                    alert('Session หมดอายุ หรือ Token ไม่ถูกต้อง กรุณาล็อกอินใหม่');
-                } else {
-                    alert(`จองไม่สำเร็จ: ${errorData.message || 'Server Error'}`);
-                }
-                console.error('Server Error:', errorData);
+                alert('จองไม่สำเร็จ');
             }
-
-        } catch (error) {
-            console.error('Connection Error:', error);
-            alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ (Connection Refused)');
-        }
+        } catch (error) { alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'); }
     };
 
     return (
         <div className="container">
             {/* Header */}
-            <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: '#2563eb', padding: '15px', borderRadius: '12px', color: 'white' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                        <Home size={24} color="#2563eb" />
+                    {/* ✅ แก้ไข 1: ปุ่ม Home สีขาว และใช้ navigate('/') */}
+                    <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                        <Home size={28} color="white" /> 
                     </button>
-                    <h1 style={{ margin: 0 }}>จองคิวล้างรถ</h1>
+                    <h1 style={{ margin: 0, fontSize: '1.2rem' }}>จองคิวล้างรถ</h1>
                 </div>
-                {user && <span style={{ color: '#666' }}>👤 {user}</span>}
+                {customerProfile && (
+                    <span style={{ fontSize: '0.9rem', opacity: 0.9 }}>
+                        👤 {customerProfile.fullName || customerProfile.username}
+                    </span>
+                )}
             </div>
 
-            {/* 4. หน้าสรุปรายการ (Summary) เมื่อจองสำเร็จ */}
+            {/* Success Page */}
             {isSubmitted ? (
                 <div style={{ textAlign: 'center', padding: '20px', maxWidth: '500px', margin: '0 auto' }}>
-                    <CheckCircle size={64} color="#16a34a" style={{ margin: '0 auto 20px' }} />
+                    <CheckCircle size={80} color="#16a34a" style={{ margin: '0 auto 20px' }} />
                     <h2 style={{ color: '#16a34a', marginBottom: '10px' }}>จองคิวสำเร็จ!</h2>
                     <p style={{ color: '#666', marginBottom: '20px' }}>ระบบได้รับข้อมูลการจองของคุณแล้ว</p>
 
-                    {/* การ์ดสรุป */}
-                    <div style={{
-                        textAlign: 'left',
-                        background: '#fff',
-                        padding: '25px',
-                        borderRadius: '16px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                        border: '1px solid #e2e8f0'
-                    }}>
-                        <h3 style={{ margin: '0 0 15px 0', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', color: '#1e293b' }}>
-                            📄 รายละเอียดการจอง
-                        </h3>
+                    <div style={{ textAlign: 'left', background: '#fff', padding: '25px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', border: '1px solid #e2e8f0' }}>
+                        {/* ... (รายละเอียดการจอง คงเดิม) ... */}
+                        <h3 style={{ margin: '0 0 15px 0', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', color: '#1e293b' }}>📄 รายละเอียดการจอง</h3>
                         <div style={{ display: 'grid', gap: '12px', fontSize: '0.95rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: '#64748b' }}>ทะเบียนรถ:</span>
-                                <span style={{ fontWeight: '600' }}>{bookingSummary?.plateNumber}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: '#64748b' }}>ขนาดรถ:</span>
-                                <span style={{ fontWeight: '600' }}>{bookingSummary?.carLabel}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: '#64748b' }}>บริการ:</span>
-                                <span style={{ fontWeight: '600' }}>{bookingSummary?.serviceName}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: '#64748b' }}>วัน-เวลา:</span>
-                                <span style={{ fontWeight: '600' }}>{bookingSummary?.displayDate} | {bookingSummary?.displayTime} น.</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: '#64748b' }}>เพิ่มเติม:</span>
-                                <span style={{ fontWeight: '600', maxWidth: '200px', textAlign: 'right' }}>{bookingSummary?.additionalInfo || '-'}</span>
-                            </div>
-                            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', color: '#2563eb' }}>
-                                <strong>ยอดรวมสุทธิ</strong>
-                                <strong>{bookingSummary?.totalPrice} บาท</strong>
-                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>ผู้จอง:</span><span style={{ fontWeight: '600', color: '#2563eb' }}>{bookingSummary?.customerName}</span></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>เบอร์โทร:</span><span style={{ fontWeight: '600' }}>{bookingSummary?.customerTel}</span></div>
+                            <div style={{ height: '1px', background: '#f1f5f9', margin: '5px 0' }}></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>ทะเบียนรถ:</span><span style={{ fontWeight: '600' }}>{bookingSummary?.plateNumber}</span></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>ขนาดรถ:</span><span style={{ fontWeight: '600' }}>{bookingSummary?.carLabel}</span></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>บริการ:</span><span style={{ fontWeight: '600' }}>{bookingSummary?.serviceName}</span></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>วัน-เวลา:</span><span style={{ fontWeight: '600' }}>{bookingSummary?.displayDate} | {bookingSummary?.displayTime} น.</span></div>
+                            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', color: '#2563eb' }}><strong>ยอดรวมสุทธิ</strong><strong>{bookingSummary?.totalPrice} บาท</strong></div>
                         </div>
                     </div>
 
                     <div style={{ marginTop: '30px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                        {/* ปุ่มนี้ถ้ายังไม่มีหน้า History ก็ให้กดแล้วกลับหน้าแรกไปก่อน */}
-                        <button onClick={() => navigate('/history')} className="btn btn-outline">
-                            ดูประวัติการจอง
-                        </button>
-                        <button onClick={() => window.location.reload()} className="btn btn-primary">
+                        {/* ✅ แก้ไข 2: ลบปุ่มประวัติทิ้ง เหลือแค่ปุ่มกลับหน้าหลัก */}
+                        {/* ✅ แก้ไข 3: ใช้ navigate('/') แทน reload() ไม่หลุด Login แน่นอน */}
+                        <button onClick={() => navigate('/')} className="btn btn-primary" style={{width: '100%'}}>
                             กลับหน้าหลัก
                         </button>
                     </div>
                 </div>
             ) : (
+                /* ... (ส่วน Form Wizard ขั้นตอน 1-4 คงเดิม) ... */
                 <>
-                    <div className="progress-bar">
+                   {/* Progress Bar */}
+                   <div className="progress-bar">
                         {[1, 2, 3, 4].map((s) => (
                             <div key={s} className="step-item">
                                 <div className={`step-circle ${step >= s ? 'active' : ''}`}>{s}</div>
@@ -241,29 +191,28 @@ const Booking = ({ user }) => {
                             </div>
                         )}
 
-                        {/* Step 4: Info (แก้ใหม่ เหลือแค่ทะเบียนกับ Note) */}
+                        {/* Step 4: Info */}
                         {step === 4 && (
                             <div>
                                 <h2 className="section-title"><MapPin /> ข้อมูลเพิ่มเติม</h2>
+                                {customerProfile && (
+                                    <div style={{background: '#f1f5f9', padding: '15px', borderRadius: '12px', marginBottom: '20px'}}>
+                                        <div style={{display:'flex', gap:'10px', marginBottom:'5px', color:'#334155'}}>
+                                            <UserIcon size={18}/> <strong>ผู้จอง:</strong> {customerProfile.fullName || customerProfile.username}
+                                        </div>
+                                        <div style={{display:'flex', gap:'10px', color:'#334155'}}>
+                                            <Phone size={18}/> <strong>เบอร์โทร:</strong> {customerProfile.phoneNumber || '-'}
+                                        </div>
+                                    </div>
+                                )}
+                                
                                 <div className="form-group">
                                     <label style={{ fontWeight: 'bold' }}>ทะเบียนรถ <span style={{ color: 'red' }}>*</span></label>
-                                    <input
-                                        placeholder="เช่น กก-1234"
-                                        className="input-field"
-                                        value={formData.plate}
-                                        onChange={(e) => updateData('plate', e.target.value)}
-                                    />
+                                    <input placeholder="เช่น กก-1234" className="input-field" value={formData.plate} onChange={(e) => updateData('plate', e.target.value)} />
                                 </div>
                                 <div className="form-group">
                                     <label style={{ fontWeight: 'bold' }}>สิ่งที่ต้องการเพิ่มเติม (ถ้ามี)</label>
-                                    <textarea
-                                        placeholder="เช่น ขอเน้นล้อแม็ก, ไม่ต้องลงแว็กซ์"
-                                        className="input-field"
-                                        rows="3"
-                                        style={{ resize: 'none', padding: '10px', height: 'auto' }}
-                                        value={formData.note}
-                                        onChange={(e) => updateData('note', e.target.value)}
-                                    />
+                                    <textarea placeholder="เช่น ขอเน้นล้อแม็ก" className="input-field" rows="3" style={{ resize: 'none', padding: '10px', height: 'auto' }} value={formData.note} onChange={(e) => updateData('note', e.target.value)} />
                                 </div>
                             </div>
                         )}
@@ -279,8 +228,7 @@ const Booking = ({ user }) => {
                                 className="btn btn-primary" style={{ marginLeft: 'auto' }}>
                                 ถัดไป <ChevronRight size={20} />
                             </button> :
-                            <button onClick={handleSubmitBooking}
-                                disabled={!formData.plate} // บังคับแค่ทะเบียนรถ
+                            <button onClick={handleSubmitBooking} disabled={!formData.plate}
                                 className="btn btn-primary" style={{ marginLeft: 'auto', backgroundColor: '#16a34a' }}>
                                 ยืนยันการจอง <CheckCircle size={20} />
                             </button>

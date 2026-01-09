@@ -15,7 +15,6 @@ export class CarwashCategoryService implements OnModuleInit {
     private readonly categoryRepo: Repository<CarwashCategory>,
   ) {}
 
-  // 🔥 ส่วนนี้เก็บไว้เหมือนเดิมครับ (มันช่วยเติมข้อมูลประเภทรถให้คุณ)
   async onModuleInit() {
     console.log("Checking Database Data...");
     const count = await this.categoryRepo.count();
@@ -29,43 +28,41 @@ export class CarwashCategoryService implements OnModuleInit {
     }
   }
 
-  private staffList = [
-    'ช่างหนึ่ง (หัวหน้าทีม)', 'น้องมายด์ (ฝ่ายดูแลสี)', 'พี่เข้ม (ฝ่ายช่วงล่าง)', 'ป้าสมศรี (ฝ่ายดูดฝุ่น)'
-  ];
-
+  // --- ส่วนบันทึกการจอง (แก้ตรงนี้) ---
   async createBooking(data: any, userId: number) {
-    const randomStaff = this.staffList[Math.floor(Math.random() * this.staffList.length)];
-
     const newBooking = this.bookingRepo.create({
       startTime: data.startTime,
       endTime: data.endTime,
       totalPrice: data.totalPrice,
       status: BookingStatus.PENDING, 
+      
+      // ✅ 1. เพิ่มการบันทึกข้อมูลเหล่านี้
+      plateNumber: data.plateNumber,      // ทะเบียนรถ
+      additionalInfo: data.additionalInfo, // สิ่งที่ต้องการเพิ่มเติม (Note)
+      
       customer: { id: userId },
-      carwashCategory: { id: data.carTypeId },
+      carwashCategory: { id: data.carTypeId }, 
+      // service: { id: data.serviceId } // (ถ้ามี entity Service ให้เปิดบรรทัดนี้ด้วย)
     });
 
-    // 🔴 แก้ตรงนี้: เปลี่ยนจาก save เป็น insert เพื่อแก้บัค UpdateValuesMissingError
-    // (insert จะไม่พยายามไปยุ่งกับตาราง User หรือ CarType ทำให้ไม่ error)
     const result = await this.bookingRepo.insert(newBooking);
-    
-    // คืนค่ากลับไปให้เหมือนเดิม (เอา ID ที่เพิ่งสร้างใส่กลับเข้าไป)
     return { ...newBooking, id: result.identifiers[0].id };
   }
 
-  // ในไฟล์ src/carwash_category/carwash_category.service.ts
-
+  // --- ส่วนดึงประวัติการจอง (แก้ตรงนี้) ---
   async findMyBookings(userId: number) {
-    // 🔥 1. เพิ่มบรรทัดนี้: ดูว่า Controller ส่งเลข ID อะไรมาให้ค้นหา?
     console.log("🔍 กำลังค้นหาประวัติของ User ID:", userId); 
 
     const bookings = await this.bookingRepo.find({
       where: { customer: { id: userId } },
-      relations: ['carwashCategory'],
+      
+      // ✅ 2. เพิ่ม 'customer' เข้าไปใน relations เพื่อดึงชื่อและเบอร์โทร
+      // (ถ้ามี Service entity ก็เพิ่ม 'service' เข้าไปในนี้ด้วย เช่น ['carwashCategory', 'customer', 'service'])
+      relations: ['carwashCategory', 'customer'], 
+      
       order: { startTime: 'DESC' }, 
     });
     
-    // 🔥 2. เพิ่มบรรทัดนี้: ดูว่าเจอใน Database กี่รายการ?
     console.log("✅ ผลลัพธ์ที่เจอใน DB:", bookings.length, "รายการ");
 
     return bookings;

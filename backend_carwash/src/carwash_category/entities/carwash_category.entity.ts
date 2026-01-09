@@ -74,6 +74,12 @@ export class Booking {
   @Column({ type: 'enum', enum: BookingStatus, default: BookingStatus.PENDING })
   status: BookingStatus;
 
+  @Column({ nullable: true }) // อนุญาตให้ว่างได้ (เผื่อข้อมูลเก่า)
+  plateNumber: string; 
+
+  @Column({ nullable: true })
+  additionalInfo: string;
+  
   @Column('decimal', { name: 'total_price', precision: 10, scale: 2 })
   totalPrice: number;
 

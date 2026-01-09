@@ -5,7 +5,6 @@ import { Booking } from '../carwash_category/entities/carwash_category.entity';
 export enum UserRole {
   USER = 'USER',
   ADMIN = 'ADMIN',
-  STAFF = 'STAFF'
 }
 
 @Entity('users')
@@ -22,8 +21,13 @@ export class User {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
   role: UserRole;
 
+  @Column({ nullable: true }) 
+  fullName: string;
+
   @Column({ name: 'phone_number', nullable: true })
   phoneNumber: string;
+
+
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

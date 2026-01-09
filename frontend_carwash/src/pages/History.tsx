@@ -1,19 +1,25 @@
 import React, { useEffect, useState } from 'react';
+import { 
+  FileText, ChevronLeft, AlertCircle
+} from 'lucide-react';
 
-// ✅ 1. แก้ Interface ให้ตรงกับข้อมูลจริงที่ Backend ส่งมา (Booking Entity)
+// --- Interface ---
 interface BookingItem {
   id: number;
   startTime: string;
   endTime: string;
   totalPrice: number;
   status: string;
-  carwashCategory: {
-    name: string;
-    priceMultiplier: number;
-  };
+  plateNumber: string;
+  additionalInfo: string;
+  carType: number;
+  service?: { name: string; };
+  customer?: { fullName: string; username: string; phoneNumber: string; };
+  carwashCategory?: { id: number; name: string; };
 }
 
-const HistoryPage: React.FC = () => {
+// ✅ รับ props onBack มาจาก App.jsx
+const History: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [historyData, setHistoryData] = useState<BookingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -21,121 +27,177 @@ const HistoryPage: React.FC = () => {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const token = localStorage.getItem('access_token'); // หรือ 'token' เช็คชื่อให้ตรงกับตอน Login
-
+        const token = localStorage.getItem('access_token') || localStorage.getItem('token');
         if (!token) {
-          setError('ไม่พบ Token กรุณา Login ใหม่');
+          setError('ไม่พบ Token');
           setLoading(false);
           return;
         }
 
-        // ✅ 2. แก้ URL: ต้องยิงไปที่ Controller ที่เรียกใช้ findMyBookings 
-        // (ปกติถ้าไม่ได้ตั้งชื่อแปลกๆ น่าจะเป็น /carwash-category/my-bookings หรือ /bookings/my-bookings)
-        // **ลองเช็คไฟล์ Controller ของคุณนะครับว่าตั้ง Path ไว้ว่าอะไร**
         const response = await fetch('http://localhost:3000/carwash-category/my-bookings', { 
           method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Authorization': `Bearer ${token}` },
         });
 
-        if (!response.ok) {
-            // ถ้า 404 แปลว่า URL ผิด, ถ้า 401 แปลว่า Token ผิด
-            if(response.status === 404) throw new Error('ไม่พบลิงก์ API (เช็ค URL ใน Controller)');
-            throw new Error('โหลดข้อมูลไม่สำเร็จ');
-        }
-
-        const data = await response.json();
-        setHistoryData(data);
+        if (!response.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ');
+        setHistoryData(await response.json());
       } catch (err: any) {
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
-
     fetchHistory();
   }, []);
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString('th-TH', {
-      year: 'numeric', month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    });
-  };
+  const formatDate = (dateStr: string) => new Date(dateStr).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+  const getCarLabel = (typeId: number) => (typeId === 1 ? 'S/M (รถเก๋ง)' : typeId === 2 ? 'L/SUV (รถใหญ่)' : typeId === 3 ? 'XL/Van (รถตู้)' : 'ไม่ระบุ');
 
-  // ฟังก์ชันเลือกสีป้ายสถานะ
-  const getStatusColor = (status: string) => {
-    switch (status) {
-        case 'PENDING': return 'bg-yellow-100 text-yellow-800';
-        case 'CONFIRMED': return 'bg-blue-100 text-blue-800';
-        case 'COMPLETED': return 'bg-green-100 text-green-800';
-        case 'CANCELLED': return 'bg-red-100 text-red-800';
-        default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // --- Styles ปรับใหม่ตามสั่ง ---
+  const styles = {
+    // 1. พื้นหลังสีขาว (เอาสีเทาออก)
+    page: { backgroundColor: 'white', minHeight: '100vh', padding: '10px 0', fontFamily: "'Prompt', sans-serif" },
+    container: { maxWidth: '500px', margin: '0 auto' }, 
 
-  if (loading) return <div className="p-10 text-center">กำลังโหลดข้อมูล...</div>;
-  if (error) return <div className="p-10 text-center text-red-500">{error}</div>;
+    // 2. Header แถบสีน้ำเงิน (เหมือนหน้า Booking)
+    headerBar: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '15px',
+        backgroundColor: '#2563eb', // สีน้ำเงิน
+        color: 'white',
+        padding: '15px 20px',
+        borderRadius: '12px',
+        marginBottom: '30px',
+        boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.3)'
+    },
+    backBtn: {
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        color: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        padding: 0
+    },
+    headerTitle: {
+        fontSize: '1.25rem',
+        fontWeight: 'bold',
+        margin: 0
+    },
+
+    // 3. Card เน้นเงา (Shadow)
+    card: { 
+        backgroundColor: 'white', 
+        borderRadius: '16px', 
+        padding: '25px', 
+        marginBottom: '25px', 
+        // เงาชัดขึ้นเพื่อให้ลอยเด่นบนพื้นขาว
+        boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)', 
+        border: '1px solid #f1f5f9', 
+        position: 'relative' as 'relative' 
+    },
+    
+    statusBadge: (status: string) => {
+      const base = { position: 'absolute' as 'absolute', top: '20px', right: '20px', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase' as 'uppercase' };
+      if (status === 'COMPLETED') return { ...base, backgroundColor: '#dcfce7', color: '#15803d' };
+      if (status === 'CANCELLED') return { ...base, backgroundColor: '#fee2e2', color: '#b91c1c' };
+      return { ...base, backgroundColor: '#fef9c3', color: '#a16207' };
+    },
+
+    cardTitle: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid #f8fafc' },
+    
+    row: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px', fontSize: '0.95rem' },
+    label: { color: '#94a3b8', fontWeight: 500, minWidth: '90px' }, // สีเทาอ่อนลงนิดนึง
+    value: { color: '#334155', fontWeight: 600, textAlign: 'right' as 'right', flex: 1 }, // สีเข้มขึ้น
+    
+    divider: { borderTop: '2px dashed #e2e8f0', margin: '20px 0 15px 0' },
+    totalRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#2563eb', fontSize: '1.2rem', fontWeight: 'bold' },
+    
+    centerBox: { textAlign: 'center' as 'center', padding: '50px', color: '#cbd5e1' }
+  };
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">ประวัติการจองคิว</h1>
+    <div style={styles.page}>
+      <div style={styles.container}>
+        
+        {/* ✅ Header แถบสีน้ำเงิน พร้อมปุ่มย้อนกลับด้านใน */}
+        <div style={styles.headerBar}>
+            <h1 style={styles.headerTitle}>ประวัติการจอง</h1>
+        </div>
 
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        {historyData.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">ไม่พบประวัติการจอง</div>
-        ) : (
-          <table className="min-w-full leading-normal">
-            <thead>
-              <tr>
-                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  วัน/เวลาที่จอง
-                </th>
-                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  ประเภทรถ
-                </th>
-                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  ราคา
-                </th>
-                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  สถานะ
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {historyData.map((item) => (
-                <tr key={item.id}>
-                  {/* วันที่จอง */}
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    {formatDate(item.startTime)}
-                  </td>
-                  
-                  {/* ประเภทรถ (ดึงจาก carwashCategory.name) */}
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm font-medium">
-                    {item.carwashCategory?.name || '-'}
-                  </td>
-
-                  {/* ราคา */}
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm text-gray-600">
-                    {item.totalPrice} ฿
-                  </td>
-
-                  {/* สถานะ */}
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <span className={`inline-block px-3 py-1 font-semibold leading-tight rounded-full ${getStatusColor(item.status)}`}>
-                      {item.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {loading && <div style={styles.centerBox}>กำลังโหลดข้อมูล...</div>}
+        {error && <div style={{...styles.centerBox, color: '#ef4444'}}>{error}</div>}
+        
+        {!loading && !error && historyData.length === 0 && (
+          <div style={styles.centerBox}>
+            <div style={{fontSize: '3rem', marginBottom: '10px'}}>📭</div>
+            <div>ยังไม่มีประวัติการจอง</div>
+          </div>
         )}
+
+        <div>
+          {historyData.map((item) => (
+            <div key={item.id} style={styles.card}>
+              <span style={styles.statusBadge(item.status)}>{item.status}</span>
+              <div style={styles.cardTitle}>
+                 <FileText size={20} color="#64748b"/> รายละเอียด
+              </div>
+              
+              <div style={styles.row}>
+                 <span style={styles.label}>ผู้จอง:</span>
+                 <span style={styles.value}>{item.customer?.fullName || item.customer?.username || '-'}</span>
+              </div>
+              <div style={styles.row}>
+                 <span style={styles.label}>เบอร์โทร:</span>
+                 <span style={styles.value}>{item.customer?.phoneNumber || '-'}</span>
+              </div>
+
+              <div style={{height: '10px'}}></div>
+
+              <div style={styles.row}>
+                 <span style={styles.label}>ทะเบียนรถ:</span>
+                 <span style={styles.value}>{item.plateNumber || 'ไม่ระบุ'}</span>
+              </div>
+              <div style={styles.row}>
+                 <span style={styles.label}>ขนาดรถ:</span>
+                 <span style={styles.value}>{getCarLabel(item.carwashCategory?.id || 0)}</span>
+              </div>
+              <div style={styles.row}>
+                 <span style={styles.label}>บริการ:</span>
+                 <span style={styles.value}>{item.service?.name || 'Standard Wash'}</span>
+              </div>
+              <div style={styles.row}>
+                 <span style={styles.label}>วัน-เวลา:</span>
+                 <span style={styles.value}>
+                    {formatDate(item.startTime)} <br/> 
+                    <span style={{fontSize:'0.9em', color:'#64748b'}}>
+                        {new Date(item.startTime).toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})} น.
+                    </span>
+                 </span>
+              </div>
+
+              {item.additionalInfo && (
+                <div style={styles.row}>
+                   <span style={styles.label}>เพิ่มเติม:</span>
+                   <span style={{...styles.value, color: '#d97706', fontStyle: 'italic'}}>"{item.additionalInfo}"</span>
+                </div>
+              )}
+
+              <div style={styles.divider}></div>
+
+              <div style={styles.totalRow}>
+                 <span>ยอดรวมสุทธิ</span>
+                 <span>{item.totalPrice.toLocaleString()} บาท</span>
+              </div>
+
+            </div>
+          ))}
+        </div>
+
       </div>
     </div>
   );
 };
 
-export default HistoryPage;
+export default History;
