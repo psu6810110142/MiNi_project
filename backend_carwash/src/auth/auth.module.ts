@@ -3,10 +3,16 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
+
+// ❌ ลบบรรทัดที่ Error ทิ้ง (ที่ import จาก ./jwt-auth.guard)
+// ✅ เปลี่ยนเป็นบรรทัดนี้ครับ:
+import { JwtStrategy } from './jwt.strategy'; 
 
 @Module({
   imports: [
     UsersModule,
+    PassportModule,
     JwtModule.register({
       global: true,
       secret: 'secretKey123', 
@@ -14,11 +20,7 @@ import { JwtModule } from '@nestjs/jwt';
     }),
   ],
   controllers: [AuthController],
-  
-  // 👇 จุดสำคัญ! ต้องมี AuthService ใน providers ด้วย ถึงจะ export ได้
-  providers: [AuthService], 
-  
-  // ถ้าต้องการ export ให้ module อื่นใช้ (ถ้าไม่จำเป็น ลบบรรทัด exports ทิ้งก็ได้ครับ)
-  exports: [AuthService], 
+  providers: [AuthService, JwtStrategy], // ต้องไม่มีขีดแดงแล้ว
+  exports: [AuthService, PassportModule],
 })
 export class AuthModule {}

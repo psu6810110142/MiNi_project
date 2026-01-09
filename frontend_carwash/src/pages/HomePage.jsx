@@ -1,43 +1,89 @@
 import React from 'react';
-import { Sparkles, ChevronRight, Clock, ShieldCheck, Star, Zap } from 'lucide-react';
+import { Sparkles, ChevronRight, Clock, ShieldCheck, Star, Zap, LogOut, User as UserIcon, History } from 'lucide-react';
 
-const HomePage = ({ navigate }) => (
+const HomePage = ({ navigate, user, onLogout }) => (
   <div className="home-wrapper">
-    {/* --- ส่วนของ CSS (ใส่ไว้ตรงนี้เลย ไม่ต้องสร้างไฟล์แยก) --- */}
+    {/* --- CSS --- */}
     <style>{`
       .home-wrapper { padding-bottom: 40px; font-family: 'Prompt', sans-serif; }
       
       /* Navbar */
       .home-navbar { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: white; position: sticky; top: 0; z-index: 50; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-      .home-brand { display: flex; align-items: center; gap: 10px; }
+      .home-brand { display: flex; align-items: center; gap: 10px; cursor: pointer; }
       .brand-icon-bg { width: 32px; height: 32px; background: linear-gradient(135deg, #2563eb, #1d4ed8); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
       .brand-text { font-size: 1.2rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px; }
+      
       .nav-actions { display: flex; align-items: center; gap: 8px; }
       .btn-text-sm { background: none; border: none; font-size: 0.9rem; font-weight: 600; color: #64748b; cursor: pointer; }
       .btn-primary-sm { background-color: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
       .btn-primary-sm:hover { background-color: #1d4ed8; }
 
-      /* Hero Card */
+      /* User Profile Section */
+      .user-profile { display: flex; align-items: center; gap: 12px; }
+      
+      .user-info { 
+        display: flex; align-items: center; gap: 6px; 
+        color: #334155; font-weight: 600; font-size: 0.9rem; 
+      }
+
+      /* 🔥 ปุ่มประวัติ (เพิ่มใหม่) */
+      .btn-history {
+        background-color: #eff6ff;
+        color: #2563eb;
+        border: 1px solid #dbeafe;
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: 0.2s;
+      }
+      .btn-history:hover {
+        background-color: #dbeafe;
+        transform: translateY(-1px);
+      }
+
+      /* ปุ่ม Logout */
+      .btn-logout-full { 
+        background-color: #ef4444;
+        color: white; 
+        border: none; 
+        padding: 8px 16px;
+        border-radius: 20px; 
+        font-size: 0.85rem; 
+        font-weight: 600; 
+        cursor: pointer; 
+        transition: 0.2s;
+        display: flex; 
+        align-items: center; 
+        gap: 6px; 
+        box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
+      }
+      .btn-logout-full:hover { 
+        background-color: #dc2626; 
+        transform: translateY(-1px);
+      }
+
+      /* Hero, Stats, Features Styles */
       .hero-card { margin: 10px 20px; background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); border-radius: 24px; padding: 40px 25px; color: white; text-align: center; box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.4); position: relative; overflow: hidden; }
       .hero-card::before { content: ''; position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%); pointer-events: none; }
       .hero-badge { display: inline-block; background: rgba(255, 255, 255, 0.2); padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; margin-bottom: 15px; backdrop-filter: blur(4px); }
       .hero-content h1 { font-size: 1.8rem; margin: 0 0 10px; line-height: 1.3; font-weight: 800; }
       .hero-content p { font-size: 0.95rem; opacity: 0.9; margin: 0 0 25px; font-weight: 300; }
-      
-      /* ปุ่มจอง */
       .btn-hero-action { width: 100%; background: white; color: #2563eb; border: none; padding: 14px; border-radius: 16px; font-size: 1rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; transition: transform 0.2s; }
       .btn-hero-action:hover { transform: scale(1.02); }
 
-      /* Stats */
       .stats-container { display: flex; justify-content: space-around; align-items: center; margin: 20px 20px; padding: 15px; background: white; border-radius: 16px; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
       .stat-box { text-align: center; }
       .stat-number { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 1.1rem; font-weight: 800; color: #0f172a; }
       .stat-label { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
       .stat-divider { width: 1px; height: 30px; background-color: #e2e8f0; }
 
-      /* Features */
       .features-section { padding: 10px 25px; }
-      .features-section h3 { font-size: 1.1rem; color: #ffffffff; margin-bottom: 15px; }
+      .features-section h3 { font-size: 1.1rem; color: #1e293b; margin-bottom: 15px; }
       .feature-row { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 20px; background: white; padding: 15px; border-radius: 16px; border: 1px solid #f8fafc; }
       .feature-icon-box { min-width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
       .feature-icon-box.blue { background: #eff6ff; color: #2563eb; }
@@ -47,25 +93,48 @@ const HomePage = ({ navigate }) => (
       .feature-row p { margin: 0; font-size: 0.85rem; color: #64748b; line-height: 1.5; }
     `}</style>
 
-    {/* --- ส่วนของเนื้อหา (JSX) --- */}
+    {/* --- JSX --- */}
     <nav className="home-navbar">
-      <div className="home-brand">
+      <div className="home-brand" onClick={() => navigate('home')}>
         <div className="brand-icon-bg"><Sparkles size={20} color="white" /></div>
         <span className="brand-text">CleanWash</span>
       </div>
+
       <div className="nav-actions">
-        <button onClick={() => navigate('login')} className="btn-text-sm">เข้าสู่ระบบ</button>
-        <button onClick={() => navigate('register')} className="btn-primary-sm">สมัครสมาชิก</button>
+        {user ? (
+          <div className="user-profile">
+            {/* 1. ปุ่มดูประวัติการจอง (เพิ่มใหม่ตรงนี้) */}
+            <button onClick={() => navigate('history')} className="btn-history">
+              <History size={16} /> 
+              <span>ประวัติ</span>
+            </button>
+
+            <div className="user-info">
+              <UserIcon size={18} color="#2563eb" />
+              <span>{user.username}</span>
+            </div>
+            
+            <button onClick={onLogout} className="btn-logout-full">
+              <LogOut size={14} />
+            </button>
+          </div>
+        ) : (
+          <>
+            <button onClick={() => navigate('login')} className="btn-text-sm">เข้าสู่ระบบ</button>
+            <button onClick={() => navigate('register')} className="btn-primary-sm">สมัครสมาชิก</button>
+          </>
+        )}
       </div>
     </nav>
 
+    {/* ... เนื้อหาด้านล่างเหมือนเดิม ... */}
     <header className="hero-card">
       <div className="hero-content">
         <div className="hero-badge">✨ บริการล้างรถพรีเมียม</div>
         <h1>ดูแลรถที่คุณรัก<br/>ให้เงางามเหมือนใหม่</h1>
         <p>จองคิวง่ายผ่านมือถือ ไม่ต้องเสียเวลานั่งรอที่ร้าน</p>
         
-        <button onClick={() => navigate('booking')} className="btn-hero-action">
+        <button onClick={() => user ? navigate('booking') : navigate('login')} className="btn-hero-action">
           จองคิวล้างรถทันที <ChevronRight size={20} />
         </button>
       </div>

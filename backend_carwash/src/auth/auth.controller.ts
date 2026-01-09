@@ -1,22 +1,30 @@
-import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
-import { AuthService } from './auth.service';
+// src/auth/auth.controller.ts (Backend)
 
-// สร้าง Class DTO สำหรับรับค่า (ใส่ในไฟล์เดียวกันหรือแยกไฟล์ก็ได้)
-class LoginDto {
-  email: string;
-  password: string;
-}
+import { Controller, Post, Body } from '@nestjs/common';
+import { AuthService } from './auth.service'; // (ถ้ามี)
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
+  // อันเก่าที่คุณมีอยู่แล้ว (Login)
   @Post('login')
-  async login(@Body() body: LoginDto) {
-    const user = await this.authService.validateUser(body.email, body.password);
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-    return this.authService.login(user);
+  async login(@Body() body) {
+    console.log('💥 0. มีคนเคาะประตู Login! Body ที่ส่งมา:', body);
+    return this.authService.login(body);
   }
+
+  // 👇 --- เพิ่มอันนี้เข้าไปครับ! (Register) --- 👇
+  @Post('register')
+  async register(@Body() body) {
+    console.log('ข้อมูลสมัครสมาชิก:', body); // ลองปริ้นท์ดู
+    
+    // ตรงนี้เรียก Service ไปบันทึกข้อมูลลงฐานข้อมูล
+    // ตัวอย่างแบบย่อ (ถ้ายังไม่มี Service ให้ Return หลอกๆ ไปก่อนก็ได้ครับ)
+    return { 
+      message: 'สมัครสมาชิกสำเร็จ', 
+      user: body 
+    }; 
+  }
+  // 👆 ------------------------------------- 👆
 }

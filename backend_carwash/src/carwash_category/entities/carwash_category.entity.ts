@@ -1,10 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany, ManyToOne, JoinColumn, ManyToMany, JoinTable } from 'typeorm';
-
-export enum UserRole {
-  USER = 'USER',
-  ADMIN = 'ADMIN',
-  STAFF = 'STAFF',
-}
+import { User } from '../../users/users.entity';
 
 export enum BookingStatus {
   PENDING = 'PENDING',
@@ -13,37 +8,7 @@ export enum BookingStatus {
   CANCELLED = 'CANCELLED',
 }
 
-// --- TABLE: USERS ---
-@Entity('users')
-export class User {
-  @PrimaryGeneratedColumn()
-  id: number;
 
-  @Column({ unique: true })
-  username: string;
-
-  @Column()
-  password: string;
-
-  @Column({ 
-    type: 'enum', 
-    enum: UserRole, 
-    default: UserRole.USER,
-    // ตั้งชื่อใหม่เพื่อแก้ปัญหา Database จำค่าผิด
-    enumName: 'user_role_enum_new_v2_final' 
-  })
-  role: UserRole;
-
-  @Column({ name: 'phone_number', nullable: true })
-  phoneNumber: string;
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
-
-  // 👇 เพิ่มบรรทัดนี้กลับมาครับ เพื่อให้ Booking ไม่แดง
-  @OneToMany(() => Booking, (booking) => booking.customer)
-  bookings: Booking[];
-}
 
 // --- TABLE: CAR_TYPES ---
 @Entity('car_types')
@@ -56,9 +21,10 @@ export class CarwashCategory {
 
   @Column('float', { name: 'price_multiplier', default: 1.0 })
   priceMultiplier: number;
-  
+   
   @OneToMany(() => Booking, (booking) => booking.carwashCategory)
   bookings: Booking[];
+  
 }
 
 // --- TABLE: SERVICES ---
@@ -94,6 +60,7 @@ export class Booking {
   @JoinColumn({ name: 'car_type_id' })
   carwashCategory: CarwashCategory;
 
+  // เพิ่มความสัมพันธ์กับพนักงาน (User)
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'assigned_staff_id' })
   assignedStaff: User;
@@ -101,7 +68,7 @@ export class Booking {
   @Column({ name: 'start_time', type: 'timestamp' })
   startTime: Date;
 
-  @Column({ name: 'end_time', type: 'timestamp' })
+  @Column({ name: 'end_time', type: 'timestamp', nullable: true }) // เพิ่ม nullable เผื่อยังไม่รู้วันจบ
   endTime: Date;
 
   @Column({ type: 'enum', enum: BookingStatus, default: BookingStatus.PENDING })
@@ -109,6 +76,9 @@ export class Booking {
 
   @Column('decimal', { name: 'total_price', precision: 10, scale: 2 })
   totalPrice: number;
+
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 
   @ManyToMany(() => Service)
   @JoinTable({
