@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { UsersService } from '../users/user.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -10,49 +10,34 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  // ตรวจสอบ Email และ Password
-// ✅ วิธีแก้ที่ถูกต้อง
-// ใน src/auth/auth.service.ts
+  // 1. ตรวจสอบว่า Username/Password ถูกต้องไหม
+  async validateUser(username: string, pass: string): Promise<any> {
+    const user = await this.usersService.findOne(username);
 
-async validateUser(username: string, pass: string): Promise<any> {
-  // 1. หา User จาก DB
-  const user = await this.usersService.findOne(username);
-  
-  // 🔥 [เพิ่มตรงนี้] ขอดูหน้าตา User ที่ดึงมาจาก DB สดๆ หน่อยซิ ว่ามี ID ไหม
-  console.log('📌 1. ข้อมูลดิบจาก DB:', user); 
+    // ถ้าหา User ไม่เจอ
+    if (!user) return null;
 
-  if (user && user.password === pass) {
-    
-    const result = { 
-      id: user.id, // หรือลองเปลี่ยนเป็น user.userId หรือ user._id ดูครับ
-      username: user.username, 
-      role: user.role
-    };
+    // ✅ เช็คว่ารหัสผ่านตรงกันไหม (เทียบระหว่างที่พิมพ์มา vs ค่า Hash ใน DB)
+    const isMatch = await bcrypt.compare(pass, user.password);
 
-    // 🔥 [เพิ่มตรงนี้] ขอดูสิ่งที่จะส่งออกไปหน่อย
-    console.log('📌 2. ข้อมูลที่จะส่งไป Login:', result);
+    if (isMatch) {
+      const { password, ...result } = user; // ตัด password ทิ้งก่อนส่งกลับ
+      return result; // ส่ง User Object (ที่มี ID) กลับไป
+    }
 
-    return result;
+    return null;
   }
-  return null;
-}
 
-  // สร้าง Token (Payload คือข้อมูลที่จะฝังใน Token)
-  // ในไฟล์ src/auth/auth.service.ts
-
-async login(user: any) {
-  // 1. ลองปรินต์ดูว่า user ที่ส่งเข้ามาหน้าตาเป็นยังไง
-  console.log("User ที่ส่งมาทำ Token:", user); 
-
-  // 2. เช็คว่า ID มันชื่อ 'id', 'userId', หรือ '_id' กันแน่
-  // ส่วนใหญ่ถ้ามาจาก TypeORM จะเป็น .id
-  const payload = { 
-    username: user.username, 
-    sub: user.id || user.userId || user._id // กันพลาด ใส่ดักไว้ทุกทาง
-  };
-
-  return {
-    access_token: this.jwtService.sign(payload),
-  };
-}
+  // 2. สร้าง Token
+  async login(user: any) {
+    const payload = { 
+        username: user.username, 
+        sub: user.id,   // ✅ สำคัญมาก: ใส่ ID ลงไปใน Token
+        userId: user.id // ✅ ใส่กันเหนียวไว้อีกตัว
+    };
+    
+    return {
+      access_token: this.jwtService.sign(payload),
+    };
+  }
 }

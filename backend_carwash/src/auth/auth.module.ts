@@ -16,7 +16,7 @@ import { JwtStrategy } from './jwt.strategy';
     JwtModule.register({
       global: true,
       secret: 'secretKey123', 
-      signOptions: { expiresIn: '1h' },
+      signOptions: { expiresIn: '1h' }, // อายุ Token (เช่น 1 ชั่วโมง)
     }),
   ],
   controllers: [AuthController],
