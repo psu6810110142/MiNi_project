@@ -16,6 +16,7 @@ interface BookingItem {
   service?: { name: string; };
   customer?: { fullName: string; username: string; phoneNumber: string; };
   carwashCategory?: { id: number; name: string; };
+  employee?: { id: number; name: string; };
 }
 
 // ✅ รับ props onBack มาจาก App.jsx
@@ -135,6 +136,7 @@ const History: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             <div>ยังไม่มีประวัติการจอง</div>
           </div>
         )}
+        
 
         <div>
           {historyData.map((item) => (

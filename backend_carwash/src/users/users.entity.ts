@@ -1,11 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
-// 👇 Import Booking เข้ามา (Path นี้ถูกต้อง ถ้าไฟล์ Booking อยู่ใน carwash_category/entities)
 import { Booking } from '../carwash_category/entities/carwash_category.entity';
-
-export enum UserRole {
-  USER = 'USER',
-  ADMIN = 'ADMIN',
-}
+// Import Role จากไฟล์แยกที่เราสร้างไว้ (แนะนำอันนี้)
+import { Role } from './role.enum'; 
 
 @Entity('users')
 export class User {
@@ -18,21 +14,24 @@ export class User {
   @Column()
   password: string;
 
-  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
-  role: UserRole;
-
   @Column({ nullable: true }) 
   fullName: string;
 
   @Column({ name: 'phone_number', nullable: true })
   phoneNumber: string;
 
-
-
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  // ✅ เหลือไว้แค่ Booking พอครับ (History ลบทิ้งไปก่อน ตัวปัญหา)
+  // ✅ เหลือ booking ไว้ตามที่ต้องการ
   @OneToMany(() => Booking, (booking) => booking.customer)
   bookings: Booking[];
+
+  // ✅ แก้ไข: เหลือ role อันเดียว และใช้ Enum Role จากไฟล์แยก
+  @Column({
+    type: 'enum',
+    enum: Role,
+    default: Role.USER, // สมัครใหม่เป็น User เสมอ
+  })
+  role: Role;
 }

@@ -3,7 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateCarwashCategoryDto } from './dto/create-carwash_category.dto';
 import { UpdateCarwashCategoryDto } from './dto/update-carwash_category.dto';
-import { Booking, CarwashCategory, BookingStatus } from './entities/carwash_category.entity'; 
+
+// ✅ แก้บรรทัดนี้: เพิ่ม Employee เข้าไปในปีกกา
+import { Booking, CarwashCategory, BookingStatus, Employee } from './entities/carwash_category.entity';
 
 @Injectable()
 export class CarwashCategoryService implements OnModuleInit {
@@ -13,65 +15,95 @@ export class CarwashCategoryService implements OnModuleInit {
     private readonly bookingRepo: Repository<Booking>,
     @InjectRepository(CarwashCategory)
     private readonly categoryRepo: Repository<CarwashCategory>,
+    @InjectRepository(Employee)
+    private readonly employeeRepo: Repository<Employee>,
   ) {}
 
   async onModuleInit() {
     console.log("Checking Database Data...");
+    // ... (ส่วน Seed ข้อมูลรถ) ...
     const count = await this.categoryRepo.count();
     if (count === 0) {
-      console.log("Seeding Car Types...");
       await this.categoryRepo.save([
         { id: 1, name: 'S/M', priceMultiplier: 1.0 },
         { id: 2, name: 'L/SUV', priceMultiplier: 1.2 },
         { id: 3, name: 'XL/Van', priceMultiplier: 1.5 },
       ]);
     }
+
+    // Seed พนักงาน
+    try {
+        const empCount = await this.employeeRepo.count();
+        if (empCount === 0) {
+            console.log("Seeding Employees...");
+            await this.employeeRepo.save([
+                { name: 'ช่างหนึ่ง (ล้างสี)', status: 'ACTIVE' },
+                { name: 'ช่างสอง (ดูดฝุ่น)', status: 'ACTIVE' },
+                { name: 'ช่างสาม (ขัดเงา)', status: 'ACTIVE' },
+            ]);
+        }
+    } catch (error) {
+        console.log("⚠️ ข้ามการสร้างพนักงาน (อาจยังไม่ได้สร้าง Table)");
+    }
   }
 
-  // --- ส่วนบันทึกการจอง (แก้ตรงนี้) ---
   async createBooking(data: any, userId: number) {
+    
+    // ดึงพนักงานที่ว่าง
+    const activeEmployees = await this.employeeRepo.find({ where: { status: 'ACTIVE' } });
+    
+    // ตั้งค่าเริ่มต้นเป็น undefined (ไม่ใช่ null) เพื่อกัน Error
+    let assignedEmployee: Employee | undefined = undefined;
+
+    if (activeEmployees.length > 0) {
+        const randomIndex = Math.floor(Math.random() * activeEmployees.length);
+        assignedEmployee = activeEmployees[randomIndex];
+        console.log(`🎲 สุ่มได้พนักงาน: ${assignedEmployee.name}`);
+    } else {
+        console.log("⚠️ ไม่มีพนักงานว่าง (ไม่ระบุช่าง)");
+    }
+
     const newBooking = this.bookingRepo.create({
       startTime: data.startTime,
       endTime: data.endTime,
       totalPrice: data.totalPrice,
       status: BookingStatus.PENDING, 
-      
-      // ✅ 1. เพิ่มการบันทึกข้อมูลเหล่านี้
-      plateNumber: data.plateNumber,      // ทะเบียนรถ
-      additionalInfo: data.additionalInfo, // สิ่งที่ต้องการเพิ่มเติม (Note)
-      
+      plateNumber: data.plateNumber,
+      additionalInfo: data.additionalInfo,
       customer: { id: userId },
-      carwashCategory: { id: data.carTypeId }, 
-      // service: { id: data.serviceId } // (ถ้ามี entity Service ให้เปิดบรรทัดนี้ด้วย)
+      carwashCategory: { id: data.carTypeId },
+      
+      // ใส่พนักงานที่สุ่มได้ (หรือ undefined ถ้าไม่มี)
+      employee: assignedEmployee 
     });
 
-    const result = await this.bookingRepo.insert(newBooking);
-    return { ...newBooking, id: result.identifiers[0].id };
+    return await this.bookingRepo.save(newBooking);
   }
 
-  // --- ส่วนดึงประวัติการจอง (แก้ตรงนี้) ---
   async findMyBookings(userId: number) {
-    console.log("🔍 กำลังค้นหาประวัติของ User ID:", userId); 
-
-    const bookings = await this.bookingRepo.find({
+    return await this.bookingRepo.find({
       where: { customer: { id: userId } },
-      
-      // ✅ 2. เพิ่ม 'customer' เข้าไปใน relations เพื่อดึงชื่อและเบอร์โทร
-      // (ถ้ามี Service entity ก็เพิ่ม 'service' เข้าไปในนี้ด้วย เช่น ['carwashCategory', 'customer', 'service'])
-      relations: ['carwashCategory', 'customer'], 
-      
+      relations: ['carwashCategory', 'customer', 'employee'], // ดึงข้อมูลพนักงานมาโชว์ด้วย
       order: { startTime: 'DESC' }, 
     });
-    
-    console.log("✅ ผลลัพธ์ที่เจอใน DB:", bookings.length, "รายการ");
-
-    return bookings;
   }
+
+  async findAllBookings() {
+    return await this.bookingRepo.find({
+      // ดึงความสัมพันธ์มาให้ครบ (ลูกค้า, ประเภทรถ, พนักงาน)
+      relations: ['customer', 'carwashCategory', 'employee'], 
+      order: {
+        id: 'DESC', // เรียงจากรายการล่าสุดขึ้นก่อน
+      },
+    });
+  }
+
   
-  // --- CRUD เดิม ---
-  create(createCarwashCategoryDto: CreateCarwashCategoryDto) { return 'This action adds a new carwashCategory'; }
+
+  // ... CRUD อื่นๆ
+  create(dto: CreateCarwashCategoryDto) { return 'action add'; }
   findAll() { return this.categoryRepo.find(); }
-  findOne(id: number) { return `This action returns a #${id} carwashCategory`; }
-  update(id: number, updateCarwashCategoryDto: UpdateCarwashCategoryDto) { return `This action updates a #${id} carwashCategory`; }
-  remove(id: number) { return `This action removes a #${id} carwashCategory`; }
+  findOne(id: number) { return `action #${id}`; }
+  update(id: number, dto: UpdateCarwashCategoryDto) { return `action update #${id}`; }
+  remove(id: number) { return `action remove #${id}`; }
 }

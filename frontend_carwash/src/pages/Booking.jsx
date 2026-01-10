@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Car, Truck, CheckCircle, ChevronRight, ChevronLeft, MapPin, Calendar, Home, User as UserIcon, Phone } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-
+// ❌ ลบ useNavigate ออก (เพราะเราใช้ onBack)
 
 // --- Mock Data (เหมือนเดิม) ---
 const CAR_TYPES = [
@@ -49,14 +48,16 @@ const Booking = ({ onBack }) => {
     }, []);
 
     const handleSubmitBooking = async () => {
+        // ❌ เอา savedData ตรงนี้ออก (ผิดที่)
         try {
-            let token = localStorage.getItem('access_token');
+            let token = localStorage.getItem('access_token') || localStorage.getItem('token');
             if (!token) { alert('กรุณาล็อกอินใหม่'); return; }
 
             const selectedService = SERVICES.find(s => s.id === formData.service);
             const startDateTime = new Date(`${formData.date}T${formData.time}:00`);
             const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
 
+            // payload คือข้อมูลที่จะส่งไป "บันทึก" (ไม่ต้องส่งชื่อพนักงานไป เพราะหลังบ้านเป็นคนสุ่มให้)
             const payload = {
                 carTypeId: formData.carType,
                 serviceId: formData.service,
@@ -74,6 +75,9 @@ const Booking = ({ onBack }) => {
             });
 
             if (response.ok) {
+                // ✅ ประกาศ savedData ตรงนี้ (หลังจากได้ response แล้ว)
+                const savedData = await response.json();
+
                 setBookingSummary({
                     ...payload,
                     carLabel: getCarLabel(formData.carType),
@@ -82,7 +86,10 @@ const Booking = ({ onBack }) => {
                     displayTime: formData.time,
                     totalPrice: selectedService ? selectedService.price : 0,
                     customerName: customerProfile?.fullName || customerProfile?.username,
-                    customerTel: customerProfile?.phoneNumber || '-'
+                    customerTel: customerProfile?.phoneNumber || '-',
+                    
+                    // ✅ ดึงชื่อพนักงานจาก Backend มาแสดงผลตรงนี้
+                    employeeName: savedData.employee?.name || 'กำลังจัดสรร...'
                 });
                 setIsSubmitted(true);
             } else {
@@ -96,7 +103,7 @@ const Booking = ({ onBack }) => {
             {/* Header */}
             <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: '#2563eb', padding: '15px', borderRadius: '12px', color: 'white' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {/* ✅ แก้ไข 1: ปุ่ม Home สีขาว และใช้ navigate('/') */}
+                    {/* ✅ ใช้ onBack ถูกต้องแล้ว */}
                     <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                         <Home size={28} color="white" /> 
                     </button>
@@ -117,12 +124,19 @@ const Booking = ({ onBack }) => {
                     <p style={{ color: '#666', marginBottom: '20px' }}>ระบบได้รับข้อมูลการจองของคุณแล้ว</p>
 
                     <div style={{ textAlign: 'left', background: '#fff', padding: '25px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', border: '1px solid #e2e8f0' }}>
-                        {/* ... (รายละเอียดการจอง คงเดิม) ... */}
                         <h3 style={{ margin: '0 0 15px 0', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', color: '#1e293b' }}>📄 รายละเอียดการจอง</h3>
                         <div style={{ display: 'grid', gap: '12px', fontSize: '0.95rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>ผู้จอง:</span><span style={{ fontWeight: '600', color: '#2563eb' }}>{bookingSummary?.customerName}</span></div>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>เบอร์โทร:</span><span style={{ fontWeight: '600' }}>{bookingSummary?.customerTel}</span></div>
+                            
                             <div style={{ height: '1px', background: '#f1f5f9', margin: '5px 0' }}></div>
+                            
+                            {/* ✅ แสดงชื่อพนักงานที่ได้รับมอบหมาย */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: '#64748b' }}>พนักงานดูแล:</span>
+                                <span style={{ fontWeight: '600', color: '#0891b2' }}>{bookingSummary?.employeeName}</span>
+                            </div>
+
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>ทะเบียนรถ:</span><span style={{ fontWeight: '600' }}>{bookingSummary?.plateNumber}</span></div>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>ขนาดรถ:</span><span style={{ fontWeight: '600' }}>{bookingSummary?.carLabel}</span></div>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>บริการ:</span><span style={{ fontWeight: '600' }}>{bookingSummary?.serviceName}</span></div>
@@ -132,17 +146,15 @@ const Booking = ({ onBack }) => {
                     </div>
 
                     <div style={{ marginTop: '30px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                        {/* ✅ แก้ไข 2: ลบปุ่มประวัติทิ้ง เหลือแค่ปุ่มกลับหน้าหลัก */}
-                        {/* ✅ แก้ไข 3: ใช้ navigate('/') แทน reload() ไม่หลุด Login แน่นอน */}
-                        <button onClick={() => navigate('/')} className="btn btn-primary" style={{width: '100%'}}>
+                        {/* ✅ แก้ไข: ใช้ onBack แทน navigate('/') */}
+                        <button onClick={onBack} className="btn btn-primary" style={{width: '100%'}}>
                             กลับหน้าหลัก
                         </button>
                     </div>
                 </div>
             ) : (
-                /* ... (ส่วน Form Wizard ขั้นตอน 1-4 คงเดิม) ... */
+                /* ... Form Steps (เหมือนเดิม ไม่ได้แก้) ... */
                 <>
-                   {/* Progress Bar */}
                    <div className="progress-bar">
                         {[1, 2, 3, 4].map((s) => (
                             <div key={s} className="step-item">
@@ -153,7 +165,6 @@ const Booking = ({ onBack }) => {
                     </div>
 
                     <div className="content">
-                        {/* Step 1: Car Type */}
                         {step === 1 && (
                             <div>
                                 <h2 className="section-title"><Car /> เลือกขนาดรถ</h2>
@@ -167,8 +178,6 @@ const Booking = ({ onBack }) => {
                                 </div>
                             </div>
                         )}
-
-                        {/* Step 2: Service */}
                         {step === 2 && (
                             <div>
                                 <h2 className="section-title"><CheckCircle /> เลือกบริการ</h2>
@@ -181,8 +190,6 @@ const Booking = ({ onBack }) => {
                                 ))}
                             </div>
                         )}
-
-                        {/* Step 3: Date & Time */}
                         {step === 3 && (
                             <div>
                                 <h2 className="section-title"><Calendar /> วันและเวลา</h2>
@@ -190,8 +197,6 @@ const Booking = ({ onBack }) => {
                                 <div className="time-grid">{TIME_SLOTS.map(t => <button key={t} onClick={() => updateData('time', t)} className={`time-btn ${formData.time === t ? 'selected' : ''}`}>{t}</button>)}</div>
                             </div>
                         )}
-
-                        {/* Step 4: Info */}
                         {step === 4 && (
                             <div>
                                 <h2 className="section-title"><MapPin /> ข้อมูลเพิ่มเติม</h2>
@@ -205,7 +210,6 @@ const Booking = ({ onBack }) => {
                                         </div>
                                     </div>
                                 )}
-                                
                                 <div className="form-group">
                                     <label style={{ fontWeight: 'bold' }}>ทะเบียนรถ <span style={{ color: 'red' }}>*</span></label>
                                     <input placeholder="เช่น กก-1234" className="input-field" value={formData.plate} onChange={(e) => updateData('plate', e.target.value)} />

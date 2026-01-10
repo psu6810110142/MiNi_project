@@ -1,0 +1,23 @@
+# ใช้ Node.js เป็น Base Image (เลือก version ให้ตรงกับที่คุณใช้ dev)
+FROM node:18-alpine
+
+# กำหนดโฟลเดอร์ทำงานใน container
+WORKDIR /app
+
+# Copy ไฟล์ package.json และ lock file มาก่อน
+COPY package*.json ./
+
+# ลง library ต่างๆ
+RUN npm install
+
+# Copy โค้ดทั้งหมดตามมา
+COPY . .
+
+# Build โปรเจกต์ (เพราะ NestJS เป็น TypeScript ต้องแปลงเป็น JS ก่อน)
+RUN npm run build
+
+# เปิด Port 3000
+EXPOSE 3000
+
+# คำสั่งรันเมื่อ container เริ่มทำงาน
+CMD ["npm", "run", "start:prod"]

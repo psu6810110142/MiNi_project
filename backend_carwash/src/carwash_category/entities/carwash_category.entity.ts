@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany, ManyToOne, JoinColumn, ManyToMany, JoinTable } from 'typeorm';
-import { User } from '../../users/users.entity';
+import { User } from '../../users/users.entity'; 
+// ❌ ไม่ต้อง import Employee จากไฟล์อื่นแล้ว เพราะเราจะสร้างในนี้เลย
 
 export enum BookingStatus {
   PENDING = 'PENDING',
@@ -8,7 +9,22 @@ export enum BookingStatus {
   CANCELLED = 'CANCELLED',
 }
 
+// --- TABLE: EMPLOYEES (เพิ่มตรงนี้) ---
+@Entity('employees')
+export class Employee {
+  @PrimaryGeneratedColumn()
+  id: number;
 
+  @Column()
+  name: string; // ชื่อพนักงาน
+
+  @Column({ default: 'ACTIVE' })
+  status: string; // ACTIVE, BUSY, LEAVE
+
+  // เชื่อมกลับไปหา Booking
+  @OneToMany(() => Booking, (booking) => booking.employee)
+  bookings: Booking[];
+}
 
 // --- TABLE: CAR_TYPES ---
 @Entity('car_types')
@@ -24,7 +40,6 @@ export class CarwashCategory {
    
   @OneToMany(() => Booking, (booking) => booking.carwashCategory)
   bookings: Booking[];
-  
 }
 
 // --- TABLE: SERVICES ---
@@ -46,6 +61,7 @@ export class Service {
   basePrice: number;
 }
 
+
 // --- TABLE: BOOKINGS ---
 @Entity('bookings')
 export class Booking {
@@ -60,21 +76,16 @@ export class Booking {
   @JoinColumn({ name: 'car_type_id' })
   carwashCategory: CarwashCategory;
 
-  // เพิ่มความสัมพันธ์กับพนักงาน (User)
-  @ManyToOne(() => User, { nullable: true })
-  @JoinColumn({ name: 'assigned_staff_id' })
-  assignedStaff: User;
-
   @Column({ name: 'start_time', type: 'timestamp' })
   startTime: Date;
 
-  @Column({ name: 'end_time', type: 'timestamp', nullable: true }) // เพิ่ม nullable เผื่อยังไม่รู้วันจบ
+  @Column({ name: 'end_time', type: 'timestamp', nullable: true })
   endTime: Date;
 
   @Column({ type: 'enum', enum: BookingStatus, default: BookingStatus.PENDING })
   status: BookingStatus;
 
-  @Column({ nullable: true }) // อนุญาตให้ว่างได้ (เผื่อข้อมูลเก่า)
+  @Column({ nullable: true })
   plateNumber: string; 
 
   @Column({ nullable: true })
@@ -85,6 +96,11 @@ export class Booking {
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
+
+  // ✅ อันนี้คือตัวใหม่ที่เราจะใช้สุ่มพนักงาน
+  @ManyToOne(() => Employee, (employee) => employee.bookings, { nullable: true })
+  @JoinColumn({ name: 'employee_id' }) // ตั้งชื่อ column ใน DB ให้ชัดเจน
+  employee: Employee;
 
   @ManyToMany(() => Service)
   @JoinTable({

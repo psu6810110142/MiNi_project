@@ -25,6 +25,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     // 🔥 3. ส่งคืน userId ที่ถูกต้อง
-    return { userId: id, username: payload.username };
+   return { 
+        userId: id, 
+        username: payload.username,
+        role: payload.role // 👈 บรรทัดนี้สำคัญมาก! ยามต้องใช้ตรวจ
+    };
   }
 }

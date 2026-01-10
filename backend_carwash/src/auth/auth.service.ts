@@ -30,12 +30,14 @@ export class AuthService {
 
   // 2. สร้าง Token
   async login(user: any) {
+    console.log("DEBUG LOGIN USER:", user);
     const payload = { 
         username: user.username, 
         sub: user.id,   // ✅ สำคัญมาก: ใส่ ID ลงไปใน Token
-        userId: user.id // ✅ ใส่กันเหนียวไว้อีกตัว
+        userId: user.id, // ✅ ใส่กันเหนียวไว้อีกตัว
+        role: user.role // ✅✅✅ เพิ่มบรรทัดนี้เข้าไปครับ!!!
     };
-    
+    console.log("DEBUG PAYLOAD:", payload);
     return {
       access_token: this.jwtService.sign(payload),
     };

@@ -1,16 +1,46 @@
+version: '3.8'
+
 services:
+  # 👇 1. ส่วน Backend (NestJS)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: carwash_backend
+    ports:
+      - '3000:3000'
+    environment:
+      # การตั้งค่าเชื่อมต่อ DB (สำคัญมาก!)
+      - DB_HOST=db             # ต้องตรงกับชื่อ service ด้านล่าง (ไม่ใช่ localhost)
+      - DB_PORT=5432           # พอร์ตภายใน container (ไม่ใช่ 5434)
+      - DB_USERNAME=admin      # ตรงกับ POSTGRES_USER ของคุณ
+      - DB_PASSWORD=123451     # ตรงกับ POSTGRES_PASSWORD ของคุณ
+      - DB_NAME=carwashmini_dev # ตรงกับ POSTGRES_DB ของคุณ
+      - JWT_SECRET=secretKey123 # อย่าลืม Secret Key
+    depends_on:
+      - db
+    restart: always
+    networks:
+      - carwash_network
+
+  # 👇 2. ส่วน Database (ตามที่คุณส่งมา)
   db:
     image: postgres:14-alpine
     container_name: carwashmini
     restart: always
     environment:
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: 123451
+      POSTGRES_PASSWORD: '123451' # ใส่ quote กันเหนียวไว้หน่อยครับ
       POSTGRES_DB: carwashmini_dev
     ports:
-      - '5434:5432'
+      - '5434:5432' # เข้าจากเครื่องตัวเองใช้ 5434, แต่ Backend คุยกันเองใช้ 5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - carwash_network
 
 volumes:
   postgres_data:
+
+networks:
+  carwash_network:

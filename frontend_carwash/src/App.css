@@ -11,7 +11,7 @@ body {
   min-height: 100vh;
   display: block; /* ยกเลิกการตั้งค่า flex ของ Vite (ถ้ามี) */
   margin: 0;
-  padding: 20px;
+  padding: 10px;
   box-sizing: border-box;
 }
 
