@@ -9,22 +9,7 @@ export enum BookingStatus {
   CANCELLED = 'CANCELLED',
 }
 
-// --- TABLE: EMPLOYEES (เพิ่มตรงนี้) ---
-@Entity('employees')
-export class Employee {
-  @PrimaryGeneratedColumn()
-  id: number;
 
-  @Column()
-  name: string; // ชื่อพนักงาน
-
-  @Column({ default: 'ACTIVE' })
-  status: string; // ACTIVE, BUSY, LEAVE
-
-  // เชื่อมกลับไปหา Booking
-  @OneToMany(() => Booking, (booking) => booking.employee)
-  bookings: Booking[];
-}
 
 // --- TABLE: CAR_TYPES ---
 @Entity('car_types')
@@ -98,9 +83,9 @@ export class Booking {
   createdAt: Date;
 
   // ✅ อันนี้คือตัวใหม่ที่เราจะใช้สุ่มพนักงาน
-  @ManyToOne(() => Employee, (employee) => employee.bookings, { nullable: true })
-  @JoinColumn({ name: 'employee_id' }) // ตั้งชื่อ column ใน DB ให้ชัดเจน
-  employee: Employee;
+@ManyToOne(() => User, { nullable: true })
+@JoinColumn({ name: 'staff_id' })
+assignedStaff: User;
 
   @ManyToMany(() => Service)
   @JoinTable({

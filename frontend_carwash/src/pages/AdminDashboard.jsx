@@ -7,38 +7,58 @@ const AdminDashboard = ({ onLogout }) => {
   const [users, setUsers] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // State ควบคุมเมนู
   const [activeMenu, setActiveMenu] = useState('dashboard');
+  const [filterRole, setFilterRole] = useState('ALL');
+
+  // State สำหรับแก้ไขข้อมูล User
+  const [editingUser, setEditingUser] = useState(null);
+
+  // ✅ State สำหรับแก้ไขข้อมูล Booking (เพิ่มใหม่)
+  const [editingBooking, setEditingBooking] = useState(null);
+
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState("");
+
+  // ⚠️ ตรวจสอบ Port ให้ตรงกับ Backend (ในโค้ดเก่าคุณใช้ 3001 แต่ถ้า Backend รัน 3000 ให้แก้เป็น 3000)
+  const API_BASE = 'http://localhost:3001'; 
 
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
-      if (!token) { navigate('/login'); return; }
+      if (!token) { onLogout(); return; }
       try {
         const decoded = jwtDecode(token);
         setCurrentUser(decoded.username);
+
+        // เช็ค Role (ถ้า Admin ให้ผ่าน)
         if (decoded.role !== 'ADMIN') {
           alert("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
-          navigate('/');
+          onLogout();
           return;
         }
         fetchData(token);
       } catch (error) {
         localStorage.removeItem('token');
-        navigate('/login');
+        onLogout();
       }
     };
     checkAuth();
-  }, [navigate]);
+  }, [onLogout]);
 
   const fetchData = async (token) => {
     try {
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      const userRes = await axios.get('http://localhost:3000/admin/users', config);
+
+      // 1. ดึง Users ทั้งหมด
+      const userRes = await axios.get(`${API_BASE}/users`, config);
       setUsers(userRes.data);
-      // const bookingRes = await axios.get('http://localhost:3000/admin/bookings', config);
-      // setBookings(bookingRes.data);
+
+      // 2. ดึง Bookings ทั้งหมด
+      const bookingRes = await axios.get(`${API_BASE}/carwash/bookings`, config);
+      setBookings(bookingRes.data);
+
     } catch (err) {
       console.error("Fetch error", err);
     } finally {
@@ -51,221 +71,263 @@ const AdminDashboard = ({ onLogout }) => {
     onLogout();
   };
 
-  // --- STYLES (ปรับปรุงใหม่) ---
-  const styles = {
-    container: {
-      display: 'flex',
-      height: '100vh',
-      width: '100vw',
-      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      backgroundColor: '#f1f5f9',
-      overflow: 'hidden'
-    },
-    sidebar: {
-      width: '260px',
-      backgroundColor: '#1e293b',
-      color: 'white',
-      display: 'flex',
-      flexDirection: 'column',
-      flexShrink: 0,
-      boxShadow: '4px 0 10px rgba(0,0,0,0.1)'
-    },
-    sidebarHeader: {
-      height: '70px',
-      display: 'flex',
-      alignItems: 'center',
-      padding: '0 24px',
-      borderBottom: '1px solid #334155',
-      fontSize: '1.2rem',
-      fontWeight: 'bold',
-      letterSpacing: '1px'
-    },
-    menuItem: (isActive) => ({
-      padding: '16px 24px',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      backgroundColor: isActive ? '#334155' : 'transparent',
-      color: isActive ? '#fff' : '#94a3b8',
-      transition: 'all 0.3s',
-      borderLeft: isActive ? '4px solid #6366f1' : '4px solid transparent',
-      textDecoration: 'none',
-      fontSize: '0.95rem'
-    }),
-    mainContent: {
-      flex: 1,
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden'
-    },
-    header: {
-      height: '70px',
-      backgroundColor: 'white',
-      borderBottom: '1px solid #e2e8f0',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '0 48px', // [แก้จุดที่ 1] เพิ่ม Padding ด้านข้างให้ปุ่มไม่ชิดขอบ
-      boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-    },
-    contentScrollable: {
-      flex: 1,
-      overflowY: 'auto',
-      padding: '32px'
-    },
-    // [เพิ่มใหม่] Container สำหรับคุมความกว้างเนื้อหา
-    innerContainer: {
-        maxWidth: '1200px', // จำกัดความกว้างสูงสุด
-        margin: '0 auto',   // จัดกึ่งกลาง
-        width: '100%'
-    },
-    cardGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-      gap: '24px',
-      marginBottom: '32px'
-    },
-    card: {
-      backgroundColor: 'white',
-      borderRadius: '12px',
-      padding: '24px',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
-      border: '1px solid #e2e8f0',
-      display: 'flex',
-      alignItems: 'center'
-    },
-    tableContainer: {
-      backgroundColor: 'white',
-      borderRadius: '12px',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
-      border: '1px solid #e2e8f0',
-      overflow: 'hidden'
-    },
-    tableHeader: {
-      backgroundColor: '#f8fafc',
-      padding: '16px 24px',
-      borderBottom: '1px solid #e2e8f0',
-      fontWeight: '600',
-      color: '#475569'
-    },
-    table: {
-      width: '100%',
-      borderCollapse: 'collapse',
-      textAlign: 'left'
-    },
-    th: {
-      padding: '16px 24px',
-      borderBottom: '1px solid #e2e8f0',
-      color: '#64748b',
-      fontSize: '0.85rem',
-      textTransform: 'uppercase',
-      fontWeight: '600'
-    },
-    td: {
-      padding: '16px 24px',
-      borderBottom: '1px solid #f1f5f9',
-      color: '#334155'
-    },
-    badge: (role) => ({
-      padding: '4px 12px',
-      borderRadius: '9999px',
-      fontSize: '0.75rem',
-      fontWeight: 'bold',
-      backgroundColor: role === 'ADMIN' ? '#faf5ff' : '#f0fdf4',
-      color: role === 'ADMIN' ? '#6b21a8' : '#15803d',
-      border: role === 'ADMIN' ? '1px solid #e9d5ff' : '1px solid #bbf7d0'
-    }),
-    logoutBtn: {
-      backgroundColor: '#fef2f2',
-      color: '#dc2626',
-      border: '1px solid #fecaca',
-      padding: '8px 16px',
-      borderRadius: '6px',
-      cursor: 'pointer',
-      fontSize: '0.85rem',
-      fontWeight: '600',
-      whiteSpace: 'nowrap' // ห้ามตัดบรรทัด
+  // --- Functions: User Management ---
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm("คุณแน่ใจหรือไม่ที่จะลบสมาชิกคนนี้?")) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_BASE}/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUsers(users.filter((user) => user.id !== userId));
+      alert("ลบสมาชิกเรียบร้อยแล้ว");
+    } catch (err) {
+      alert("เกิดข้อผิดพลาด: " + (err.response?.data?.message || err.message));
     }
   };
 
-  if (loading) return <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh'}}>Loading...</div>;
+  const startEdit = (user) => {
+    setEditingUser({ ...user });
+  };
+
+  const handleEditChange = (e) => {
+    setEditingUser({ ...editingUser, [e.target.name]: e.target.value });
+  };
+
+  const handleSaveUser = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`${API_BASE}/users/${editingUser.id}`, editingUser, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setUsers(users.map((u) => (u.id === editingUser.id ? editingUser : u)));
+      setEditingUser(null);
+      alert("แก้ไขข้อมูลสมาชิกสำเร็จ!");
+    } catch (err) {
+      alert("เกิดข้อผิดพลาด: " + (err.response?.data?.message || err.message));
+    }
+  };
+
+  // --- ✅ [NEW FUNCTIONS] Booking Management ---
+
+  // 1. เปิด Modal รายละเอียด Booking
+  const openBookingDetail = (booking) => {
+    setEditingBooking({
+        ...booking,
+        // ดึง ID ช่างมาใส่ state เพื่อให้ Dropdown เลือกถูกคน
+        staffId: booking.assignedStaff ? booking.assignedStaff.id : '', 
+    });
+  };
+
+  // 2. บันทึกการแก้ไข Booking (เปลี่ยนช่าง / เปลี่ยนสถานะ)
+  const handleSaveBooking = async (e) => {
+      e.preventDefault();
+      try {
+          const token = localStorage.getItem('token');
+          // เตรียมข้อมูลที่จะส่งไป Backend
+          const payload = {
+              status: editingBooking.status,
+              staffId: editingBooking.staffId, // ID ช่างใหม่
+              plateNumber: editingBooking.plateNumber
+          };
+
+          // ยิง API PATCH
+          const res = await axios.patch(`${API_BASE}/carwash/bookings/${editingBooking.id}`, payload, {
+              headers: { Authorization: `Bearer ${token}` }
+          });
+
+          // อัปเดตข้อมูลในตารางทันที (ไม่ต้องโหลดใหม่)
+          setBookings(bookings.map(b => b.id === editingBooking.id ? res.data : b));
+          
+          setEditingBooking(null);
+          alert("อัปเดตข้อมูลการจองเรียบร้อย!");
+      } catch (err) {
+          alert("เกิดข้อผิดพลาดในการบันทึก: " + (err.response?.data?.message || err.message));
+      }
+  };
+
+  // 3. ลบ Booking
+  const handleDeleteBooking = async () => {
+      if (!window.confirm("⚠️ คุณแน่ใจหรือไม่ว่าจะลบรายการจองนี้? (ไม่สามารถกู้คืนได้)")) return;
+      try {
+          const token = localStorage.getItem('token');
+          await axios.delete(`${API_BASE}/carwash/bookings/${editingBooking.id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          // ลบออกจาก State
+          setBookings(bookings.filter(b => b.id !== editingBooking.id));
+          setEditingBooking(null);
+          alert("ลบรายการจองสำเร็จ");
+      } catch (err) {
+          alert("ลบไม่สำเร็จ: " + (err.response?.data?.message || err.message));
+      }
+  };
+
+  // --- Logic Helper ---
+  const getActiveJobDetails = (staffId) => {
+    const activeJob = bookings.find(b =>
+      b.assignedStaff?.id === staffId &&
+      (b.status === 'PENDING' || b.status === 'IN_PROGRESS')
+    );
+    return activeJob || null;
+  };
+
+  const filteredUsers = users.filter(user => {
+    if (filterRole === 'ALL') return true;
+    return user.role === filterRole;
+  });
+
+  const staffList = users.filter(u => u.role === 'STAFF');
+
+  // --- STYLES ---
+  const styles = {
+    container: { display: 'flex', height: '100vh', width: '100vw', fontFamily: "'Segoe UI', sans-serif", backgroundColor: '#f1f5f9', overflow: 'hidden' },
+    sidebar: { width: '260px', backgroundColor: '#1e293b', color: 'white', display: 'flex', flexDirection: 'column', flexShrink: 0 },
+    sidebarHeader: { height: '70px', display: 'flex', alignItems: 'center', padding: '0 24px', borderBottom: '1px solid #334155', fontSize: '1.2rem', fontWeight: 'bold' },
+    menuItem: (isActive) => ({ padding: '16px 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', backgroundColor: isActive ? '#334155' : 'transparent', color: isActive ? '#fff' : '#94a3b8', borderLeft: isActive ? '4px solid #6366f1' : '4px solid transparent' }),
+    mainContent: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+    header: { height: '70px', backgroundColor: 'white', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 48px' },
+    contentScrollable: { flex: 1, overflowY: 'auto', padding: '32px' },
+    innerContainer: { maxWidth: '1200px', margin: '0 auto', width: '100%' },
+    cardGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px', marginBottom: '32px' },
+    card: { backgroundColor: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', cursor: 'pointer' },
+    empGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' },
+    empCard: (isBusy) => ({
+      backgroundColor: 'white', borderRadius: '12px', padding: '20px',
+      borderLeft: isBusy ? '5px solid #ef4444' : '5px solid #22c55e',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.05)', position: 'relative'
+    }),
+    statusTag: (isBusy) => ({
+      padding: '4px 10px', borderRadius: '15px', fontSize: '0.75rem', fontWeight: 'bold',
+      backgroundColor: isBusy ? '#fee2e2' : '#dcfce7', color: isBusy ? '#991b1b' : '#166534',
+      float: 'right'
+    }),
+    jobInfo: { marginTop: '15px', padding: '10px', backgroundColor: '#f8fafc', borderRadius: '8px', fontSize: '0.9rem', color: '#475569' },
+    tableContainer: { backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', overflow: 'hidden' },
+    tableHeaderContainer: { backgroundColor: '#f8fafc', padding: '16px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    tableTitle: { fontWeight: '600', color: '#475569', fontSize: '1rem' },
+    table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
+    th: { padding: '16px 24px', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.85rem', textTransform: 'uppercase', fontWeight: '600' },
+    td: { padding: '16px 24px', borderBottom: '1px solid #f1f5f9', color: '#334155' },
+    badge: (role) => {
+      let bg = '#f0fdf4', color = '#15803d', border = '#bbf7d0';
+      if (role === 'ADMIN') { bg = '#faf5ff'; color = '#6b21a8'; border = '#e9d5ff'; }
+      else if (role === 'STAFF') { bg = '#eff6ff'; color = '#1d4ed8'; border = '#dbeafe'; }
+      return { padding: '4px 12px', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', backgroundColor: bg, color, border: `1px solid ${border}` };
+    },
+    logoutBtn: { backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' },
+    filterSelect: { padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', color: '#475569', outline: 'none', cursor: 'pointer' },
+    modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
+    // ปรับขนาด Modal ให้กว้างขึ้นสำหรับ Booking
+    modalContent: { backgroundColor: 'white', padding: '30px', borderRadius: '12px', width: '500px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' },
+    formGroup: { marginBottom: '15px' },
+    label: { display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#475569', fontWeight: '600' },
+    input: { width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '1rem' },
+    modalActions: { display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' },
+    saveBtn: { backgroundColor: '#6366f1', color: 'white', padding: '10px 20px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '600' },
+    cancelBtn: { backgroundColor: '#e2e8f0', color: '#475569', padding: '10px 20px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '600' },
+    // ปุ่มใหม่สำหรับ Booking
+    detailBtn: { backgroundColor: '#e0e7ff', color: '#4338ca', padding: '6px 12px', borderRadius: '4px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }
+  };
+
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
 
   return (
     <div style={styles.container}>
-      
-      {/* 1. SIDEBAR (ซ้าย) */}
       <aside style={styles.sidebar}>
-        <div style={styles.sidebarHeader}>
-          🛠️ Admin Panel
-        </div>
-        <nav style={{paddingTop: '20px'}}>
-          <div style={styles.menuItem(activeMenu === 'dashboard')} onClick={() => setActiveMenu('dashboard')}>
-            📊 ภาพรวมระบบ
-          </div>
-          <div style={styles.menuItem(activeMenu === 'users')} onClick={() => setActiveMenu('users')}>
-            👥 จัดการสมาชิก
-          </div>
-          <div style={styles.menuItem(activeMenu === 'bookings')} onClick={() => setActiveMenu('bookings')}>
-            📅 รายการจอง
-          </div>
+        <div style={styles.sidebarHeader}>🛠️ Admin Panel</div>
+        <nav style={{ paddingTop: '20px' }}>
+          <div style={styles.menuItem(activeMenu === 'dashboard')} onClick={() => setActiveMenu('dashboard')}>📊 ภาพรวมระบบ</div>
+          <div style={styles.menuItem(activeMenu === 'employees')} onClick={() => setActiveMenu('employees')}>👨‍🔧 สถานะพนักงาน</div>
+          <div style={styles.menuItem(activeMenu === 'users')} onClick={() => setActiveMenu('users')}>👥 จัดการสมาชิก</div>
+          <div style={styles.menuItem(activeMenu === 'bookings')} onClick={() => setActiveMenu('bookings')}>📅 รายการจอง</div>
         </nav>
       </aside>
 
-      {/* 2. MAIN CONTENT (ขวา) */}
       <div style={styles.mainContent}>
-        
-        {/* Header บนสุด */}
         <header style={styles.header}>
-          <h2 style={{fontSize:'1.25rem', fontWeight:'bold', color:'#1e293b'}}>
-            {activeMenu === 'dashboard' ? 'Dashboard Overview' : ''}
-            {activeMenu === 'users' ? 'User Management' : ''}
-            {activeMenu === 'bookings' ? 'Booking Management' : ''}
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1e293b' }}>
+            {activeMenu === 'dashboard' ? 'Dashboard Overview' :
+              activeMenu === 'employees' ? 'Employee Monitor' :
+                activeMenu === 'users' ? 'User Management' : 'Booking Management'}
           </h2>
-          <div style={{display:'flex', alignItems:'center', gap:'20px'}}>
-            <div style={{textAlign:'right'}}>
-              <div style={{fontWeight:'bold', fontSize:'0.9rem'}}>{currentUser}</div>
-              <div style={{fontSize:'0.75rem', color:'#6366f1'}}>ADMINISTRATOR</div>
-            </div>
-            <button onClick={handleLogout} style={styles.logoutBtn}>
-              ออกจากระบบ
-            </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <span style={{ color: '#64748b' }}>Admin: <b>{currentUser}</b></span>
+            <button onClick={handleLogout} style={styles.logoutBtn}>ออกจากระบบ</button>
           </div>
         </header>
 
-        {/* เนื้อหาด้านใน (Scroll ได้) */}
         <main style={styles.contentScrollable}>
-          
-          {/* [แก้จุดที่ 2] ครอบด้วย Inner Container เพื่อคุมความกว้าง */}
           <div style={styles.innerContainer}>
 
-              {/* Cards */}
+            {/* Dashboard Stats */}
+            {activeMenu === 'dashboard' && (
               <div style={styles.cardGrid}>
-                <div style={styles.card}>
-                  <div style={{fontSize:'2.5rem', marginRight:'20px'}}>👥</div>
-                  <div>
-                    <p style={{color:'#64748b', fontSize:'0.9rem'}}>สมาชิกทั้งหมด</p>
-                    <h3 style={{fontSize:'1.8rem', fontWeight:'bold', margin:0}}>{users.length}</h3>
-                  </div>
+                <div style={styles.card} onClick={() => setActiveMenu('users')}><div style={{ fontSize: '2.5rem', marginRight: '20px' }}>👥</div><div><p style={{ color: '#64748b', fontSize: '0.9rem' }}>สมาชิกทั้งหมด</p><h3 style={{ fontSize: '1.8rem', fontWeight: 'bold', margin: 0 }}>{users.length}</h3></div></div>
+                <div style={styles.card} onClick={() => setActiveMenu('employees')}><div style={{ fontSize: '2.5rem', marginRight: '20px' }}>👔</div><div><p style={{ color: '#64748b', fontSize: '0.9rem' }}>พนักงาน</p><h3 style={{ fontSize: '1.8rem', fontWeight: 'bold', margin: 0 }}>{staffList.length}</h3></div></div>
+                <div style={styles.card} onClick={() => setActiveMenu('bookings')}><div style={{ fontSize: '2.5rem', marginRight: '20px' }}>📅</div><div><p style={{ color: '#64748b', fontSize: '0.9rem' }}>รายการจองทั้งหมด</p><h3 style={{ fontSize: '1.8rem', fontWeight: 'bold', margin: 0 }}>{bookings.length}</h3></div></div>
+              </div>
+            )}
+
+            {/* Employee Monitor */}
+            {activeMenu === 'employees' && (
+              <div>
+                <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 style={{ color: '#334155', margin: 0 }}>สถานะการทำงานของพนักงาน (Staff Status)</h3>
+                  <div style={{ color: '#64748b' }}>จำนวนช่าง: {staffList.length} คน</div>
                 </div>
-                <div style={styles.card}>
-                  <div style={{fontSize:'2.5rem', marginRight:'20px'}}>📅</div>
-                  <div>
-                    <p style={{color:'#64748b', fontSize:'0.9rem'}}>รายการจองทั้งหมด</p>
-                    <h3 style={{fontSize:'1.8rem', fontWeight:'bold', margin:0}}>{bookings.length}</h3>
-                  </div>
-                </div>
-                <div style={styles.card}>
-                  <div style={{fontSize:'2.5rem', marginRight:'20px'}}>💰</div>
-                  <div>
-                    <p style={{color:'#64748b', fontSize:'0.9rem'}}>รายได้วันนี้</p>
-                    <h3 style={{fontSize:'1.8rem', fontWeight:'bold', margin:0}}>฿9999999</h3>
-                  </div>
+
+                <div style={styles.empGrid}>
+                  {staffList.length > 0 ? staffList.map(staff => {
+                    const isBusy = staff.status === 'BUSY';
+                    const activeJob = isBusy ? getActiveJobDetails(staff.id) : null;
+
+                    return (
+                      <div key={staff.id} style={styles.empCard(isBusy)}>
+                        <span style={styles.statusTag(isBusy)}>{isBusy ? '● กำลังทำงาน' : '● ว่าง'}</span>
+                        <div style={{ fontWeight: 'bold', fontSize: '1.1rem', marginTop: '5px' }}>{staff.username}</div>
+                        <div style={{ fontSize: '0.9rem', color: '#64748b' }}>{staff.fullName || 'ไม่ระบุชื่อ'}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '10px' }}>📞 {staff.phoneNumber || '-'}</div>
+
+                        {isBusy && activeJob ? (
+                          <div style={styles.jobInfo}>
+                            <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>🛠️ กำลังให้บริการ:</div>
+                            <div>ลูกค้า: {activeJob.customer?.username || 'Guest'}</div>
+                            <div>บริการ: {activeJob.carwashCategory?.name || '-'}</div>
+                            <div style={{ fontSize: '0.8rem', marginTop: '5px', color: '#6366f1' }}>
+                              เริ่มเวลา: {new Date(activeJob.startTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </div>
+                        ) : isBusy ? (
+                          <div style={styles.jobInfo}>ไม่พบข้อมูลงานปัจจุบัน</div>
+                        ) : (
+                          <div style={{ marginTop: '20px', textAlign: 'center', color: '#cbd5e1', fontSize: '2rem' }}>☕</div>
+                        )}
+                      </div>
+                    )
+                  }) : (
+                    <p style={{ color: '#64748b' }}>ไม่มีพนักงานในระบบ (Role: STAFF)</p>
+                  )}
                 </div>
               </div>
+            )}
 
-              {/* Table */}
+            {/* Users Table */}
+            {(activeMenu === 'users' || activeMenu === 'dashboard') && (
               <div style={styles.tableContainer}>
-                <div style={styles.tableHeader}>รายชื่อสมาชิกในระบบ</div>
+                <div style={styles.tableHeaderContainer}>
+                  <div style={styles.tableTitle}>รายชื่อสมาชิกในระบบ</div>
+                  <select style={styles.filterSelect} value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
+                    <option value="ALL">ทั้งหมด (All Users)</option>
+                    <option value="USER">ลูกค้า (Customer)</option>
+                    <option value="STAFF">พนักงาน (Staff)</option>
+                    <option value="ADMIN">แอดมิน (Admin)</option>
+                  </select>
+                </div>
+
                 <table style={styles.table}>
                   <thead>
                     <tr>
@@ -274,32 +336,181 @@ const AdminDashboard = ({ onLogout }) => {
                       <th style={styles.th}>ชื่อ-สกุล</th>
                       <th style={styles.th}>เบอร์โทร</th>
                       <th style={styles.th}>สถานะ</th>
-                      <th style={styles.th}>วันที่สมัคร</th>
+                      <th style={styles.th}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((user) => (
-                      <tr key={user.id} style={{borderBottom:'1px solid #f1f5f9'}}>
+                    {filteredUsers.map((user) => (
+                      <tr key={user.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                         <td style={styles.td}>#{user.id}</td>
-                        <td style={{...styles.td, fontWeight:'bold'}}>{user.username}</td>
+                        <td style={{ ...styles.td, fontWeight: 'bold' }}>{user.username}</td>
                         <td style={styles.td}>{user.fullName || '-'}</td>
-                        <td style={styles.td}>{user.phone_number || '-'}</td>
+                        <td style={styles.td}>{user.phoneNumber || '-'}</td>
+                        <td style={styles.td}><span style={styles.badge(user.role)}>{user.role}</span></td>
                         <td style={styles.td}>
-                          <span style={styles.badge(user.role)}>{user.role}</span>
+                          <button onClick={() => startEdit(user)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem', marginRight: '10px' }} title="แก้ไข">✏️</button>
+                          <button onClick={() => handleDeleteUser(user.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem' }} title="ลบ">🗑️</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredUsers.length === 0 && <tr><td colSpan="6" style={{ ...styles.td, textAlign: 'center' }}>ไม่พบข้อมูล</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Bookings Table */}
+            {activeMenu === 'bookings' && (
+              <div style={styles.tableContainer}>
+                <div style={styles.tableHeaderContainer}>
+                  <div style={styles.tableTitle}>รายการจองคิวทั้งหมด</div>
+                </div>
+                <table style={styles.table}>
+                  <thead>
+                    {/* ✅ เพิ่มคอลัมน์ "จัดการ" */}
+                    <tr><th style={styles.th}>ID</th><th style={styles.th}>ลูกค้า</th><th style={styles.th}>บริการ</th><th style={styles.th}>ช่างผู้รับงาน</th><th style={styles.th}>เวลานัดหมาย</th><th style={styles.th}>สถานะ</th><th style={styles.th}>จัดการ</th></tr>
+                  </thead>
+                  <tbody>
+                    {bookings.map((booking) => (
+                      <tr key={booking.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={styles.td}>#{booking.id}</td>
+                        <td style={styles.td}>{booking.customer ? booking.customer.username : 'Unknown'}</td>
+                        <td style={styles.td}>{booking.carwashCategory ? booking.carwashCategory.name : '-'}</td>
+                        <td style={{ ...styles.td, color: booking.assignedStaff ? '#2563eb' : '#94a3b8' }}>
+                          {booking.assignedStaff ? booking.assignedStaff.username : 'รอจัดสรร'}
+                        </td>
+                        <td style={styles.td}>{new Date(booking.startTime).toLocaleString('th-TH')}</td>
+                        <td style={styles.td}>
+                            {/* แต่งสีสถานะหน่อย */}
+                            <span style={{padding:'4px 8px', borderRadius:'10px', background: booking.status==='COMPLETED'?'#dcfce7':'#fff7ed', color: booking.status==='COMPLETED'?'#166534':'#c2410c', fontSize:'0.8rem', fontWeight:'bold'}}>
+                                {booking.status}
+                            </span>
                         </td>
                         <td style={styles.td}>
-                           {user.created_at ? new Date(user.created_at).toLocaleDateString('th-TH') : '-'}
+                            {/* ✅ ปุ่มกดดูรายละเอียด */}
+                            <button onClick={() => openBookingDetail(booking)} style={styles.detailBtn}>
+                                📝 รายละเอียด
+                            </button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {users.length === 0 && <div style={{padding:'40px', textAlign:'center', color:'#94a3b8'}}>ไม่พบข้อมูล</div>}
               </div>
-
-          </div> {/* จบ Inner Container */}
+            )}
+          </div>
         </main>
       </div>
+
+      {/* ✏️ MODAL แก้ไข USER */}
+      {editingUser && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <h3 style={{ marginBottom: '20px', color: '#1e293b' }}>✏️ แก้ไขข้อมูลสมาชิก</h3>
+            <form onSubmit={handleSaveUser}>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Username</label>
+                <input style={{ ...styles.input, backgroundColor: '#f1f5f9' }} name="username" value={editingUser.username} disabled />
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>ชื่อ-สกุล</label>
+                <input style={styles.input} name="fullName" value={editingUser.fullName || ''} onChange={handleEditChange} />
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>เบอร์โทรศัพท์</label>
+                <input style={styles.input} name="phoneNumber" value={editingUser.phoneNumber || ''} onChange={handleEditChange} />
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>สถานะ (Role)</label>
+                <select style={styles.input} name="role" value={editingUser.role} onChange={handleEditChange}>
+                  <option value="USER">USER (ลูกค้า)</option>
+                  <option value="STAFF">STAFF (พนักงาน)</option>
+                  <option value="ADMIN">ADMIN (แอดมิน)</option>
+                </select>
+              </div>
+              <div style={styles.modalActions}>
+                <button type="button" onClick={() => setEditingUser(null)} style={styles.cancelBtn}>ยกเลิก</button>
+                <button type="submit" style={styles.saveBtn}>บันทึก</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 📝 ✅ [NEW] MODAL จัดการ BOOKING (ดู/แก้/ลบ) */}
+      {editingBooking && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
+                <h3 style={{margin:0}}>📝 จัดการรายการจอง #{editingBooking.id}</h3>
+                <button onClick={() => setEditingBooking(null)} style={{background:'none', border:'none', fontSize:'1.5rem', cursor:'pointer'}}>×</button>
+            </div>
+            
+            <form onSubmit={handleSaveBooking}>
+              {/* Read Only Info */}
+              <div style={{background:'#f8fafc', padding:'15px', borderRadius:'8px', marginBottom:'20px', fontSize:'0.9rem'}}>
+                  <div><strong>ลูกค้า:</strong> {editingBooking.customer?.fullName || editingBooking.customer?.username}</div>
+                  <div><strong>เบอร์โทร:</strong> {editingBooking.customer?.phoneNumber || '-'}</div>
+                  <div><strong>บริการ:</strong> {editingBooking.carwashCategory?.name}</div>
+                  <div><strong>เวลาจอง:</strong> {new Date(editingBooking.startTime).toLocaleString('th-TH')}</div>
+                  <div><strong>ราคา:</strong> {editingBooking.totalPrice} บาท</div>
+              </div>
+
+              {/* Editable Fields */}
+              <div style={styles.formGroup}>
+                <label style={styles.label}>ทะเบียนรถ</label>
+                <input 
+                    style={styles.input} 
+                    value={editingBooking.plateNumber || ''} 
+                    onChange={(e) => setEditingBooking({...editingBooking, plateNumber: e.target.value})}
+                />
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>สถานะงาน (Status)</label>
+                <select 
+                    style={styles.input} 
+                    value={editingBooking.status} 
+                    onChange={(e) => setEditingBooking({...editingBooking, status: e.target.value})}
+                >
+                    <option value="PENDING">PENDING (รอดำเนินการ)</option>
+                    <option value="IN_PROGRESS">IN_PROGRESS (กำลังล้าง)</option>
+                    <option value="COMPLETED">COMPLETED (เสร็จสิ้น)</option>
+                    <option value="CANCELLED">CANCELLED (ยกเลิก)</option>
+                </select>
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>ช่างผู้รับผิดชอบ (Assigned Staff)</label>
+                <select 
+                    style={styles.input} 
+                    value={editingBooking.staffId || ''} 
+                    onChange={(e) => setEditingBooking({...editingBooking, staffId: e.target.value})}
+                >
+                    <option value="">-- ยังไม่ระบุช่าง --</option>
+                    {staffList.map(staff => (
+                        <option key={staff.id} value={staff.id}>
+                            {staff.username} ({staff.status})
+                        </option>
+                    ))}
+                </select>
+                <small style={{color:'#64748b', fontSize:'0.8rem'}}>* เลือกเพื่อเปลี่ยนคนรับงาน (ช่างต้องว่างสถานะ AVAILABLE จะดีที่สุด)</small>
+              </div>
+
+              <div style={{display:'flex', justifyContent:'space-between', marginTop:'30px'}}>
+                 <button type="button" onClick={handleDeleteBooking} style={{...styles.cancelBtn, background:'#fee2e2', color:'#dc2626'}}>
+                    🗑️ ลบรายการนี้
+                 </button>
+                 <div style={{display:'flex', gap:'10px'}}>
+                    <button type="button" onClick={() => setEditingBooking(null)} style={styles.cancelBtn}>ยกเลิก</button>
+                    <button type="submit" style={styles.saveBtn}>บันทึกการแก้ไข</button>
+                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

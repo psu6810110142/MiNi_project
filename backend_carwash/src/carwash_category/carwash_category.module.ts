@@ -1,21 +1,18 @@
-import { Module,forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CarwashCategoryService } from './carwash_category.service';
 import { CarwashCategoryController } from './carwash_category.controller';
-import { AuthModule } from '../auth/auth.module';
-// 1. Import Entity ทั้งหมดที่จะใช้ (อย่าลืม Booking)
-import { CarwashCategory, Booking, Service , Employee } from './entities/carwash_category.entity';
-
+import { CarwashCategory, Booking } from './entities/carwash_category.entity';
+// ✅ Import User
+import { User } from '../users/users.entity'; 
 
 @Module({
   imports: [
-    // 2. ลงทะเบียน Entity ทั้งหมดตรงนี้!
-    // ถ้าขาดตัวไหนไป Service จะเรียกใช้ไม่ได้และ Error แบบในรูปครับ
-    TypeOrmModule.forFeature([CarwashCategory, Booking, Service,Employee]),
-    forwardRef(() => AuthModule), 
+    // ✅ เพิ่ม User เข้าไปในลิสต์นี้ เพื่อแก้ error Nest can't resolve dependencies
+    TypeOrmModule.forFeature([CarwashCategory, Booking, User]), 
   ],
   controllers: [CarwashCategoryController],
   providers: [CarwashCategoryService],
-  exports: [CarwashCategoryService] // export เผื่อที่อื่นจะใช้
+  exports: [CarwashCategoryService], 
 })
 export class CarwashCategoryModule {}

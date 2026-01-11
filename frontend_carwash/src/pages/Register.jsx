@@ -36,7 +36,7 @@ const Register = ({ onBack }) => {
         };
 
         // 3. ยิง API (แก้ URL ตามของคุณ)
-        const response = await fetch('http://localhost:3000/auth/register', {
+        const response = await fetch('http://localhost:3001/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)

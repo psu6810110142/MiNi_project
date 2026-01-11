@@ -8,6 +8,6 @@ async function bootstrap() {
   app.enableCors();
 
   // 2. สั่งรัน Server (ต้องมีบรรทัดเดียว! ห้ามมี app.listen ซ้ำ)
-  await app.listen(3000);
+  await app.listen(3001);
 }
 bootstrap();

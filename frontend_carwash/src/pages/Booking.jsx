@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Car, Truck, CheckCircle, ChevronRight, ChevronLeft, MapPin, Calendar, Home, User as UserIcon, Phone } from 'lucide-react';
-// ❌ ลบ useNavigate ออก (เพราะเราใช้ onBack)
 
-// --- Mock Data (เหมือนเดิม) ---
+// --- Mock Data ---
 const CAR_TYPES = [
     { id: 1, label: 'S/M', desc: 'รถเก๋งเล็ก-กลาง', icon: <Car size={32} /> },
     { id: 2, label: 'L/SUV', desc: 'รถเก๋งใหญ่-SUV', icon: <Car size={40} /> },
@@ -27,6 +26,9 @@ const Booking = ({ onBack }) => {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [bookingSummary, setBookingSummary] = useState(null);
 
+    // ✅ ตรวจสอบ Port ให้ตรง (3000 หรือ 3001)
+    const API_BASE = 'http://localhost:3001';
+
     const updateData = (key, value) => setFormData({ ...formData, [key]: value });
     const getCarLabel = (id) => CAR_TYPES.find(c => c.id === id)?.label || '-';
     const getServiceName = (id) => SERVICES.find(s => s.id === id)?.name || '-';
@@ -36,7 +38,7 @@ const Booking = ({ onBack }) => {
             const token = localStorage.getItem('access_token') || localStorage.getItem('token');
             if (!token) return;
             try {
-                const response = await fetch('http://localhost:3000/auth/profile', {
+                const response = await fetch(`${API_BASE}/auth/profile`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (response.ok) {
@@ -48,7 +50,6 @@ const Booking = ({ onBack }) => {
     }, []);
 
     const handleSubmitBooking = async () => {
-        // ❌ เอา savedData ตรงนี้ออก (ผิดที่)
         try {
             let token = localStorage.getItem('access_token') || localStorage.getItem('token');
             if (!token) { alert('กรุณาล็อกอินใหม่'); return; }
@@ -57,7 +58,6 @@ const Booking = ({ onBack }) => {
             const startDateTime = new Date(`${formData.date}T${formData.time}:00`);
             const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
 
-            // payload คือข้อมูลที่จะส่งไป "บันทึก" (ไม่ต้องส่งชื่อพนักงานไป เพราะหลังบ้านเป็นคนสุ่มให้)
             const payload = {
                 carTypeId: formData.carType,
                 serviceId: formData.service,
@@ -68,15 +68,21 @@ const Booking = ({ onBack }) => {
                 additionalInfo: formData.note
             };
 
-            const response = await fetch('http://localhost:3000/carwash-category/booking', {
+            // ✅ 1. แก้ไข URL ให้ถูกต้อง (/carwash/booking)
+            const response = await fetch(`${API_BASE}/carwash/booking`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(payload)
             });
 
             if (response.ok) {
-                // ✅ ประกาศ savedData ตรงนี้ (หลังจากได้ response แล้ว)
                 const savedData = await response.json();
+
+                // ✅ 2. ดึงชื่อช่างอย่างถูกต้อง (จาก assignedStaff)
+                let assignedStaffName = 'กำลังจัดสรรเจ้าหน้าที่...';
+                if (savedData.assignedStaff && savedData.assignedStaff.username) {
+                    assignedStaffName = `ช่าง ${savedData.assignedStaff.username}`;
+                }
 
                 setBookingSummary({
                     ...payload,
@@ -88,14 +94,17 @@ const Booking = ({ onBack }) => {
                     customerName: customerProfile?.fullName || customerProfile?.username,
                     customerTel: customerProfile?.phoneNumber || '-',
                     
-                    // ✅ ดึงชื่อพนักงานจาก Backend มาแสดงผลตรงนี้
-                    employeeName: savedData.employee?.name || 'กำลังจัดสรร...'
+                    // แสดงชื่อช่าง
+                    employeeName: assignedStaffName
                 });
                 setIsSubmitted(true);
             } else {
-                alert('จองไม่สำเร็จ');
+                alert('จองไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
             }
-        } catch (error) { alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'); }
+        } catch (error) { 
+            console.error(error);
+            alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'); 
+        }
     };
 
     return (
@@ -103,7 +112,6 @@ const Booking = ({ onBack }) => {
             {/* Header */}
             <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: '#2563eb', padding: '15px', borderRadius: '12px', color: 'white' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {/* ✅ ใช้ onBack ถูกต้องแล้ว */}
                     <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                         <Home size={28} color="white" /> 
                     </button>
@@ -131,7 +139,7 @@ const Booking = ({ onBack }) => {
                             
                             <div style={{ height: '1px', background: '#f1f5f9', margin: '5px 0' }}></div>
                             
-                            {/* ✅ แสดงชื่อพนักงานที่ได้รับมอบหมาย */}
+                            {/* แสดงชื่อพนักงาน */}
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <span style={{ color: '#64748b' }}>พนักงานดูแล:</span>
                                 <span style={{ fontWeight: '600', color: '#0891b2' }}>{bookingSummary?.employeeName}</span>
@@ -146,16 +154,15 @@ const Booking = ({ onBack }) => {
                     </div>
 
                     <div style={{ marginTop: '30px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                        {/* ✅ แก้ไข: ใช้ onBack แทน navigate('/') */}
-                        <button onClick={onBack} className="btn btn-primary" style={{width: '100%'}}>
+                        <button onClick={onBack} className="btn btn-primary" style={{ width: '100%' }}>
                             กลับหน้าหลัก
                         </button>
                     </div>
                 </div>
             ) : (
-                /* ... Form Steps (เหมือนเดิม ไม่ได้แก้) ... */
+                /* Form Steps - คงเดิม */
                 <>
-                   <div className="progress-bar">
+                    <div className="progress-bar">
                         {[1, 2, 3, 4].map((s) => (
                             <div key={s} className="step-item">
                                 <div className={`step-circle ${step >= s ? 'active' : ''}`}>{s}</div>
@@ -201,12 +208,12 @@ const Booking = ({ onBack }) => {
                             <div>
                                 <h2 className="section-title"><MapPin /> ข้อมูลเพิ่มเติม</h2>
                                 {customerProfile && (
-                                    <div style={{background: '#f1f5f9', padding: '15px', borderRadius: '12px', marginBottom: '20px'}}>
-                                        <div style={{display:'flex', gap:'10px', marginBottom:'5px', color:'#334155'}}>
-                                            <UserIcon size={18}/> <strong>ผู้จอง:</strong> {customerProfile.fullName || customerProfile.username}
+                                    <div style={{ background: '#f1f5f9', padding: '15px', borderRadius: '12px', marginBottom: '20px' }}>
+                                        <div style={{ display: 'flex', gap: '10px', marginBottom: '5px', color: '#334155' }}>
+                                            <UserIcon size={18} /> <strong>ผู้จอง:</strong> {customerProfile.fullName || customerProfile.username}
                                         </div>
-                                        <div style={{display:'flex', gap:'10px', color:'#334155'}}>
-                                            <Phone size={18}/> <strong>เบอร์โทร:</strong> {customerProfile.phoneNumber || '-'}
+                                        <div style={{ display: 'flex', gap: '10px', color: '#334155' }}>
+                                            <Phone size={18} /> <strong>เบอร์โทร:</strong> {customerProfile.phoneNumber || '-'}
                                         </div>
                                     </div>
                                 )}

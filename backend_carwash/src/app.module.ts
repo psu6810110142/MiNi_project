@@ -9,7 +9,7 @@ import { CarwashCategoryModule } from './carwash_category/carwash_category.modul
 
 // Import Entities
 import { User } from './users/users.entity';
-import { Booking, CarwashCategory, Service, Employee } from './carwash_category/entities/carwash_category.entity';
+import { Booking, CarwashCategory, Service } from './carwash_category/entities/carwash_category.entity';
 
 @Module({
   imports: [
@@ -30,7 +30,7 @@ import { Booking, CarwashCategory, Service, Employee } from './carwash_category/
       database: process.env.DB_NAME || 'carwashmini_dev',
 
       // ใส่ Entity ครบแล้ว เยี่ยมครับ
-      entities: [User, Booking, CarwashCategory, Service, Employee],
+      entities: [User, Booking, CarwashCategory, Service,],
       synchronize: true, // ⚠️ อย่าลืมเปลี่ยนเป็น false ตอนขึ้น Production จริงนะครับ
     }),
     UsersModule,

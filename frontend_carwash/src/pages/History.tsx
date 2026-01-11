@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { 
-  FileText, ChevronLeft, AlertCircle
+  FileText
 } from 'lucide-react';
 
 // --- Interface ---
@@ -16,10 +16,11 @@ interface BookingItem {
   service?: { name: string; };
   customer?: { fullName: string; username: string; phoneNumber: string; };
   carwashCategory?: { id: number; name: string; };
-  employee?: { id: number; name: string; };
+  
+  // ✅ เพิ่ม field นี้เพื่อให้รองรับชื่อช่าง
+  assignedStaff?: { id: number; username: string; fullName: string; }; 
 }
 
-// ✅ รับ props onBack มาจาก App.jsx
 const History: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [historyData, setHistoryData] = useState<BookingItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +36,7 @@ const History: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           return;
         }
 
-        const response = await fetch('http://localhost:3000/carwash-category/my-bookings', { 
+        const response = await fetch('http://localhost:3001/carwash/my-bookings', { 
           method: 'GET',
           headers: { 'Authorization': `Bearer ${token}` },
         });
@@ -54,67 +55,40 @@ const History: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const formatDate = (dateStr: string) => new Date(dateStr).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
   const getCarLabel = (typeId: number) => (typeId === 1 ? 'S/M (รถเก๋ง)' : typeId === 2 ? 'L/SUV (รถใหญ่)' : typeId === 3 ? 'XL/Van (รถตู้)' : 'ไม่ระบุ');
 
-  // --- Styles ปรับใหม่ตามสั่ง ---
+  // --- Styles ---
   const styles = {
-    // 1. พื้นหลังสีขาว (เอาสีเทาออก)
     page: { backgroundColor: 'white', minHeight: '100vh', padding: '10px 0', fontFamily: "'Prompt', sans-serif" },
     container: { maxWidth: '500px', margin: '0 auto' }, 
 
-    // 2. Header แถบสีน้ำเงิน (เหมือนหน้า Booking)
     headerBar: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '15px',
-        backgroundColor: '#2563eb', // สีน้ำเงิน
-        color: 'white',
-        padding: '15px 20px',
-        borderRadius: '12px',
-        marginBottom: '30px',
+        display: 'flex', alignItems: 'center', gap: '15px',
+        backgroundColor: '#2563eb', color: 'white',
+        padding: '15px 20px', borderRadius: '12px', marginBottom: '30px',
         boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.3)'
     },
-    backBtn: {
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        color: 'white',
-        display: 'flex',
-        alignItems: 'center',
-        padding: 0
-    },
-    headerTitle: {
-        fontSize: '1.25rem',
-        fontWeight: 'bold',
-        margin: 0
-    },
+    headerTitle: { fontSize: '1.25rem', fontWeight: 'bold', margin: 0 },
 
-    // 3. Card เน้นเงา (Shadow)
     card: { 
-        backgroundColor: 'white', 
-        borderRadius: '16px', 
-        padding: '25px', 
-        marginBottom: '25px', 
-        // เงาชัดขึ้นเพื่อให้ลอยเด่นบนพื้นขาว
-        boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)', 
-        border: '1px solid #f1f5f9', 
-        position: 'relative' as 'relative' 
+        backgroundColor: 'white', borderRadius: '16px', padding: '25px', marginBottom: '25px', 
+        boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)', border: '1px solid #f1f5f9', position: 'relative' as 'relative' 
     },
     
     statusBadge: (status: string) => {
       const base = { position: 'absolute' as 'absolute', top: '20px', right: '20px', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase' as 'uppercase' };
       if (status === 'COMPLETED') return { ...base, backgroundColor: '#dcfce7', color: '#15803d' };
       if (status === 'CANCELLED') return { ...base, backgroundColor: '#fee2e2', color: '#b91c1c' };
+      if (status === 'IN_PROGRESS') return { ...base, backgroundColor: '#dbeafe', color: '#1d4ed8' }; // เพิ่มสีฟ้าสำหรับกำลังทำ
       return { ...base, backgroundColor: '#fef9c3', color: '#a16207' };
     },
 
     cardTitle: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid #f8fafc' },
     
     row: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px', fontSize: '0.95rem' },
-    label: { color: '#94a3b8', fontWeight: 500, minWidth: '90px' }, // สีเทาอ่อนลงนิดนึง
-    value: { color: '#334155', fontWeight: 600, textAlign: 'right' as 'right', flex: 1 }, // สีเข้มขึ้น
+    label: { color: '#94a3b8', fontWeight: 500, minWidth: '90px' }, 
+    value: { color: '#334155', fontWeight: 600, textAlign: 'right' as 'right', flex: 1 }, 
     
     divider: { borderTop: '2px dashed #e2e8f0', margin: '20px 0 15px 0' },
     totalRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#2563eb', fontSize: '1.2rem', fontWeight: 'bold' },
-    
     centerBox: { textAlign: 'center' as 'center', padding: '50px', color: '#cbd5e1' }
   };
 
@@ -122,8 +96,11 @@ const History: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     <div style={styles.page}>
       <div style={styles.container}>
         
-        {/* ✅ Header แถบสีน้ำเงิน พร้อมปุ่มย้อนกลับด้านใน */}
         <div style={styles.headerBar}>
+            {/* ปุ่มย้อนกลับ */}
+            <button onClick={onBack} style={{background:'none', border:'none', color:'white', fontSize:'1.5rem', cursor:'pointer', marginRight:'10px'}}>
+                ←
+            </button>
             <h1 style={styles.headerTitle}>ประวัติการจอง</h1>
         </div>
 
@@ -136,7 +113,6 @@ const History: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             <div>ยังไม่มีประวัติการจอง</div>
           </div>
         )}
-        
 
         <div>
           {historyData.map((item) => (
@@ -153,6 +129,14 @@ const History: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               <div style={styles.row}>
                  <span style={styles.label}>เบอร์โทร:</span>
                  <span style={styles.value}>{item.customer?.phoneNumber || '-'}</span>
+              </div>
+
+              {/* ✅ เพิ่มส่วนแสดงชื่อช่างที่นี่ */}
+              <div style={styles.row}>
+                 <span style={styles.label}>พนักงานดูแล:</span>
+                 <span style={{...styles.value, color: item.assignedStaff ? '#0891b2' : '#94a3b8'}}>
+                    {item.assignedStaff ? `ช่าง ${item.assignedStaff.username}` : 'กำลังจัดสรร...'}
+                 </span>
               </div>
 
               <div style={{height: '10px'}}></div>
@@ -181,8 +165,8 @@ const History: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
               {item.additionalInfo && (
                 <div style={styles.row}>
-                   <span style={styles.label}>เพิ่มเติม:</span>
-                   <span style={{...styles.value, color: '#d97706', fontStyle: 'italic'}}>"{item.additionalInfo}"</span>
+                    <span style={styles.label}>เพิ่มเติม:</span>
+                    <span style={{...styles.value, color: '#d97706', fontStyle: 'italic'}}>"{item.additionalInfo}"</span>
                 </div>
               )}
 

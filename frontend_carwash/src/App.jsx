@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import HomePage from './pages/HomePage';
+import HomePage from './pages/Homepage';
 import Login from './pages/Loginpage.jsx'; // ตรวจสอบชื่อไฟล์ให้ตรง (Loginpage หรือ Login)
 import Register from './pages/Register';
 import Booking from './pages/Booking';
