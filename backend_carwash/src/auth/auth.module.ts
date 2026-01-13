@@ -4,9 +4,6 @@ import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-
-// ❌ ลบบรรทัดที่ Error ทิ้ง (ที่ import จาก ./jwt-auth.guard)
-// ✅ เปลี่ยนเป็นบรรทัดนี้ครับ:
 import { JwtStrategy } from './jwt.strategy'; 
 
 @Module({
@@ -16,11 +13,11 @@ import { JwtStrategy } from './jwt.strategy';
     JwtModule.register({
       global: true,
       secret: 'secretKey123', 
-      signOptions: { expiresIn: '1h' }, // อายุ Token (เช่น 1 ชั่วโมง)
+      signOptions: { expiresIn: '1h' }, // อายุ Token
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy], // ต้องไม่มีขีดแดงแล้ว
+  providers: [AuthService, JwtStrategy],
   exports: [AuthService, PassportModule],
 })
 export class AuthModule {}

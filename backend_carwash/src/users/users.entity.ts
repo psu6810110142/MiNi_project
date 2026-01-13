@@ -1,6 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
 import { Booking } from '../carwash_category/entities/carwash_category.entity';
-// Import Role จากไฟล์แยกที่เราสร้างไว้ (แนะนำอันนี้)
 import { Role } from './role.enum';
 
 @Entity('users')
@@ -23,7 +22,6 @@ export class User {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  // ✅ เหลือ booking ไว้ตามที่ต้องการ
   @OneToMany(() => Booking, (booking) => booking.customer)
   bookings: Booking[];
 
@@ -32,7 +30,6 @@ export class User {
   @OneToMany(() => Booking, (booking) => booking.assignedStaff)
   jobs: Booking[];
 
-  // ✅ แก้ไข: เหลือ role อันเดียว และใช้ Enum Role จากไฟล์แยก
   @Column({
     type: 'enum',
     enum: Role,

@@ -1,7 +1,17 @@
+// src/pages/HomePage.tsx
+
 import React from 'react';
 import { Sparkles, ChevronRight, Clock, ShieldCheck, Star, Zap, LogOut, User as UserIcon, History } from 'lucide-react';
+import { User } from '../interface'; // ✅ Import Interface มาใช้
 
-const HomePage = ({ navigate, user, onLogout }) => (
+// ✅ สร้าง Interface สำหรับ Props ของ Component นี้
+interface HomePageProps {
+  navigate: (page: string) => void; // ฟังก์ชันรับ string
+  user: User | null;                // User หรือ null
+  onLogout: () => void;             // ฟังก์ชันเปล่าๆ
+}
+
+const HomePage: React.FC<HomePageProps> = ({ navigate, user, onLogout }) => (
   <div className="home-wrapper">
     {/* --- CSS --- */}
     <style>{`
@@ -103,7 +113,7 @@ const HomePage = ({ navigate, user, onLogout }) => (
       <div className="nav-actions">
         {user ? (
           <div className="user-profile">
-            {/* 1. ปุ่มดูประวัติการจอง (เพิ่มใหม่ตรงนี้) */}
+            {/* 1. ปุ่มดูประวัติการจอง */}
             <button onClick={() => navigate('history')} className="btn-history">
               <History size={16} /> 
               <span>ประวัติ</span>

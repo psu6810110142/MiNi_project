@@ -1,6 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany, ManyToOne, JoinColumn, ManyToMany, JoinTable } from 'typeorm';
 import { User } from '../../users/users.entity'; 
-// ❌ ไม่ต้อง import Employee จากไฟล์อื่นแล้ว เพราะเราจะสร้างในนี้เลย
 
 export enum BookingStatus {
   PENDING = 'PENDING',
@@ -82,7 +81,7 @@ export class Booking {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  // ✅ อันนี้คือตัวใหม่ที่เราจะใช้สุ่มพนักงาน
+  //Relationshipสำหรับเทเบิลพนักงาน
 @ManyToOne(() => User, { nullable: true })
 @JoinColumn({ name: 'staff_id' })
 assignedStaff: User;

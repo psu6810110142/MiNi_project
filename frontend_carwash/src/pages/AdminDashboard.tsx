@@ -1,27 +1,69 @@
+// src/pages/AdminDashboard.tsx
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { jwtDecode } from "jwt-decode";
 
-const AdminDashboard = ({ onLogout }) => {
-  const [users, setUsers] = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
+// --- 1. สร้าง Interfaces สำหรับกำหนด Type ของข้อมูล ---
 
-  // State ควบคุมเมนู
-  const [activeMenu, setActiveMenu] = useState('dashboard');
-  const [filterRole, setFilterRole] = useState('ALL');
+interface AdminDashboardProps {
+  onLogout: () => void;
+}
 
-  // State สำหรับแก้ไขข้อมูล User
-  const [editingUser, setEditingUser] = useState(null);
+interface User {
+  id: number;
+  username: string;
+  role: 'ADMIN' | 'STAFF' | 'USER' | 'ALL'; // เพิ่ม ALL สำหรับ filter
+  fullName?: string;
+  phoneNumber?: string;
+  status?: 'AVAILABLE' | 'BUSY'; // สำหรับ Staff
+}
 
-  // ✅ State สำหรับแก้ไขข้อมูล Booking (เพิ่มใหม่)
-  const [editingBooking, setEditingBooking] = useState(null);
+interface CarwashCategory {
+    id: number;
+    name: string;
+    price: number;
+}
+
+interface Booking {
+  id: number;
+  startTime: string;
+  endTime: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  plateNumber: string;
+  totalPrice: number;
+  customer?: User;
+  assignedStaff?: User | null;
+  carwashCategory?: CarwashCategory;
+  
+  // Field พิเศษสำหรับตอนแก้ไข (Optional)
+  staffId?: number | string;
+}
+
+interface DecodedToken {
+    username: string;
+    role: string;
+    [key: string]: any;
+}
+
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
+  // State Typing
+  const [users, setUsers] = useState<User[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // Menu Typing
+  const [activeMenu, setActiveMenu] = useState<'dashboard' | 'employees' | 'users' | 'bookings'>('dashboard');
+  const [filterRole, setFilterRole] = useState<string>('ALL');
+
+  // Editing States
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
 
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState("");
+  const [currentUser, setCurrentUser] = useState<string>("");
 
-  // ⚠️ ตรวจสอบ Port ให้ตรงกับ Backend (ในโค้ดเก่าคุณใช้ 3001 แต่ถ้า Backend รัน 3000 ให้แก้เป็น 3000)
   const API_BASE = 'http://localhost:3001'; 
 
   useEffect(() => {
@@ -29,10 +71,10 @@ const AdminDashboard = ({ onLogout }) => {
       const token = localStorage.getItem('token');
       if (!token) { onLogout(); return; }
       try {
-        const decoded = jwtDecode(token);
+        const decoded = jwtDecode<DecodedToken>(token);
         setCurrentUser(decoded.username);
 
-        // เช็ค Role (ถ้า Admin ให้ผ่าน)
+        // เช็ค Role
         if (decoded.role !== 'ADMIN') {
           alert("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
           onLogout();
@@ -47,16 +89,15 @@ const AdminDashboard = ({ onLogout }) => {
     checkAuth();
   }, [onLogout]);
 
-  const fetchData = async (token) => {
+  const fetchData = async (token: string) => {
     try {
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
-      // 1. ดึง Users ทั้งหมด
-      const userRes = await axios.get(`${API_BASE}/users`, config);
+      // Generic Type ให้ Axios รู้ว่ารับ User[] กลับมา
+      const userRes = await axios.get<User[]>(`${API_BASE}/users`, config);
       setUsers(userRes.data);
 
-      // 2. ดึง Bookings ทั้งหมด
-      const bookingRes = await axios.get(`${API_BASE}/carwash/bookings`, config);
+      const bookingRes = await axios.get<Booking[]>(`${API_BASE}/carwash/bookings`, config);
       setBookings(bookingRes.data);
 
     } catch (err) {
@@ -72,7 +113,7 @@ const AdminDashboard = ({ onLogout }) => {
   };
 
   // --- Functions: User Management ---
-  const handleDeleteUser = async (userId) => {
+  const handleDeleteUser = async (userId: number) => {
     if (!window.confirm("คุณแน่ใจหรือไม่ที่จะลบสมาชิกคนนี้?")) return;
     try {
       const token = localStorage.getItem('token');
@@ -81,21 +122,23 @@ const AdminDashboard = ({ onLogout }) => {
       });
       setUsers(users.filter((user) => user.id !== userId));
       alert("ลบสมาชิกเรียบร้อยแล้ว");
-    } catch (err) {
+    } catch (err: any) {
       alert("เกิดข้อผิดพลาด: " + (err.response?.data?.message || err.message));
     }
   };
 
-  const startEdit = (user) => {
+  const startEdit = (user: User) => {
     setEditingUser({ ...user });
   };
 
-  const handleEditChange = (e) => {
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (!editingUser) return;
     setEditingUser({ ...editingUser, [e.target.name]: e.target.value });
   };
 
-  const handleSaveUser = async (e) => {
+  const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editingUser) return;
     try {
       const token = localStorage.getItem('token');
       await axios.patch(`${API_BASE}/users/${editingUser.id}`, editingUser, {
@@ -105,51 +148,48 @@ const AdminDashboard = ({ onLogout }) => {
       setUsers(users.map((u) => (u.id === editingUser.id ? editingUser : u)));
       setEditingUser(null);
       alert("แก้ไขข้อมูลสมาชิกสำเร็จ!");
-    } catch (err) {
+    } catch (err: any) {
       alert("เกิดข้อผิดพลาด: " + (err.response?.data?.message || err.message));
     }
   };
 
-  // --- ✅ [NEW FUNCTIONS] Booking Management ---
+  // --- Functions: Booking Management ---
 
-  // 1. เปิด Modal รายละเอียด Booking
-  const openBookingDetail = (booking) => {
+  const openBookingDetail = (booking: Booking) => {
     setEditingBooking({
         ...booking,
-        // ดึง ID ช่างมาใส่ state เพื่อให้ Dropdown เลือกถูกคน
+        // ดึง ID ช่างมาใส่ state (ถ้ามี)
         staffId: booking.assignedStaff ? booking.assignedStaff.id : '', 
     });
   };
 
-  // 2. บันทึกการแก้ไข Booking (เปลี่ยนช่าง / เปลี่ยนสถานะ)
-  const handleSaveBooking = async (e) => {
+  const handleSaveBooking = async (e: React.FormEvent) => {
       e.preventDefault();
+      if (!editingBooking) return;
+
       try {
           const token = localStorage.getItem('token');
-          // เตรียมข้อมูลที่จะส่งไป Backend
           const payload = {
               status: editingBooking.status,
-              staffId: editingBooking.staffId, // ID ช่างใหม่
+              staffId: editingBooking.staffId, 
               plateNumber: editingBooking.plateNumber
           };
 
-          // ยิง API PATCH
           const res = await axios.patch(`${API_BASE}/carwash/bookings/${editingBooking.id}`, payload, {
               headers: { Authorization: `Bearer ${token}` }
           });
 
-          // อัปเดตข้อมูลในตารางทันที (ไม่ต้องโหลดใหม่)
           setBookings(bookings.map(b => b.id === editingBooking.id ? res.data : b));
           
           setEditingBooking(null);
           alert("อัปเดตข้อมูลการจองเรียบร้อย!");
-      } catch (err) {
+      } catch (err: any) {
           alert("เกิดข้อผิดพลาดในการบันทึก: " + (err.response?.data?.message || err.message));
       }
   };
 
-  // 3. ลบ Booking
   const handleDeleteBooking = async () => {
+      if (!editingBooking) return;
       if (!window.confirm("⚠️ คุณแน่ใจหรือไม่ว่าจะลบรายการจองนี้? (ไม่สามารถกู้คืนได้)")) return;
       try {
           const token = localStorage.getItem('token');
@@ -157,17 +197,16 @@ const AdminDashboard = ({ onLogout }) => {
               headers: { Authorization: `Bearer ${token}` }
           });
           
-          // ลบออกจาก State
           setBookings(bookings.filter(b => b.id !== editingBooking.id));
           setEditingBooking(null);
           alert("ลบรายการจองสำเร็จ");
-      } catch (err) {
+      } catch (err: any) {
           alert("ลบไม่สำเร็จ: " + (err.response?.data?.message || err.message));
       }
   };
 
   // --- Logic Helper ---
-  const getActiveJobDetails = (staffId) => {
+  const getActiveJobDetails = (staffId: number) => {
     const activeJob = bookings.find(b =>
       b.assignedStaff?.id === staffId &&
       (b.status === 'PENDING' || b.status === 'IN_PROGRESS')
@@ -182,12 +221,12 @@ const AdminDashboard = ({ onLogout }) => {
 
   const staffList = users.filter(u => u.role === 'STAFF');
 
-  // --- STYLES ---
-  const styles = {
+  // --- STYLES (Typed as React.CSSProperties) ---
+  const styles: { [key: string]: React.CSSProperties | ((arg: any) => React.CSSProperties) } = {
     container: { display: 'flex', height: '100vh', width: '100vw', fontFamily: "'Segoe UI', sans-serif", backgroundColor: '#f1f5f9', overflow: 'hidden' },
     sidebar: { width: '260px', backgroundColor: '#1e293b', color: 'white', display: 'flex', flexDirection: 'column', flexShrink: 0 },
     sidebarHeader: { height: '70px', display: 'flex', alignItems: 'center', padding: '0 24px', borderBottom: '1px solid #334155', fontSize: '1.2rem', fontWeight: 'bold' },
-    menuItem: (isActive) => ({ padding: '16px 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', backgroundColor: isActive ? '#334155' : 'transparent', color: isActive ? '#fff' : '#94a3b8', borderLeft: isActive ? '4px solid #6366f1' : '4px solid transparent' }),
+    menuItem: (isActive: boolean) => ({ padding: '16px 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', backgroundColor: isActive ? '#334155' : 'transparent', color: isActive ? '#fff' : '#94a3b8', borderLeft: isActive ? '4px solid #6366f1' : '4px solid transparent' }),
     mainContent: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
     header: { height: '70px', backgroundColor: 'white', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 48px' },
     contentScrollable: { flex: 1, overflowY: 'auto', padding: '32px' },
@@ -195,12 +234,12 @@ const AdminDashboard = ({ onLogout }) => {
     cardGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px', marginBottom: '32px' },
     card: { backgroundColor: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', cursor: 'pointer' },
     empGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' },
-    empCard: (isBusy) => ({
+    empCard: (isBusy: boolean) => ({
       backgroundColor: 'white', borderRadius: '12px', padding: '20px',
       borderLeft: isBusy ? '5px solid #ef4444' : '5px solid #22c55e',
       boxShadow: '0 2px 4px rgba(0,0,0,0.05)', position: 'relative'
     }),
-    statusTag: (isBusy) => ({
+    statusTag: (isBusy: boolean) => ({
       padding: '4px 10px', borderRadius: '15px', fontSize: '0.75rem', fontWeight: 'bold',
       backgroundColor: isBusy ? '#fee2e2' : '#dcfce7', color: isBusy ? '#991b1b' : '#166534',
       float: 'right'
@@ -212,7 +251,7 @@ const AdminDashboard = ({ onLogout }) => {
     table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
     th: { padding: '16px 24px', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.85rem', textTransform: 'uppercase', fontWeight: '600' },
     td: { padding: '16px 24px', borderBottom: '1px solid #f1f5f9', color: '#334155' },
-    badge: (role) => {
+    badge: (role: string) => {
       let bg = '#f0fdf4', color = '#15803d', border = '#bbf7d0';
       if (role === 'ADMIN') { bg = '#faf5ff'; color = '#6b21a8'; border = '#e9d5ff'; }
       else if (role === 'STAFF') { bg = '#eff6ff'; color = '#1d4ed8'; border = '#dbeafe'; }
@@ -221,7 +260,6 @@ const AdminDashboard = ({ onLogout }) => {
     logoutBtn: { backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' },
     filterSelect: { padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', color: '#475569', outline: 'none', cursor: 'pointer' },
     modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
-    // ปรับขนาด Modal ให้กว้างขึ้นสำหรับ Booking
     modalContent: { backgroundColor: 'white', padding: '30px', borderRadius: '12px', width: '500px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' },
     formGroup: { marginBottom: '15px' },
     label: { display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: '#475569', fontWeight: '600' },
@@ -229,46 +267,45 @@ const AdminDashboard = ({ onLogout }) => {
     modalActions: { display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' },
     saveBtn: { backgroundColor: '#6366f1', color: 'white', padding: '10px 20px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '600' },
     cancelBtn: { backgroundColor: '#e2e8f0', color: '#475569', padding: '10px 20px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '600' },
-    // ปุ่มใหม่สำหรับ Booking
     detailBtn: { backgroundColor: '#e0e7ff', color: '#4338ca', padding: '6px 12px', borderRadius: '4px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }
   };
 
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
 
   return (
-    <div style={styles.container}>
-      <aside style={styles.sidebar}>
-        <div style={styles.sidebarHeader}>🛠️ Admin Panel</div>
+    <div style={styles.container as React.CSSProperties}>
+      <aside style={styles.sidebar as React.CSSProperties}>
+        <div style={styles.sidebarHeader as React.CSSProperties}>🛠️ Admin Panel</div>
         <nav style={{ paddingTop: '20px' }}>
-          <div style={styles.menuItem(activeMenu === 'dashboard')} onClick={() => setActiveMenu('dashboard')}>📊 ภาพรวมระบบ</div>
-          <div style={styles.menuItem(activeMenu === 'employees')} onClick={() => setActiveMenu('employees')}>👨‍🔧 สถานะพนักงาน</div>
-          <div style={styles.menuItem(activeMenu === 'users')} onClick={() => setActiveMenu('users')}>👥 จัดการสมาชิก</div>
-          <div style={styles.menuItem(activeMenu === 'bookings')} onClick={() => setActiveMenu('bookings')}>📅 รายการจอง</div>
+          <div style={(styles.menuItem as Function)(activeMenu === 'dashboard')} onClick={() => setActiveMenu('dashboard')}>📊 ภาพรวมระบบ</div>
+          <div style={(styles.menuItem as Function)(activeMenu === 'employees')} onClick={() => setActiveMenu('employees')}>👨‍🔧 สถานะพนักงาน</div>
+          <div style={(styles.menuItem as Function)(activeMenu === 'users')} onClick={() => setActiveMenu('users')}>👥 จัดการสมาชิก</div>
+          <div style={(styles.menuItem as Function)(activeMenu === 'bookings')} onClick={() => setActiveMenu('bookings')}>📅 รายการจอง</div>
         </nav>
       </aside>
 
-      <div style={styles.mainContent}>
-        <header style={styles.header}>
+      <div style={styles.mainContent as React.CSSProperties}>
+        <header style={styles.header as React.CSSProperties}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1e293b' }}>
             {activeMenu === 'dashboard' ? 'Dashboard Overview' :
-              activeMenu === 'employees' ? 'Employee Monitor' :
-                activeMenu === 'users' ? 'User Management' : 'Booking Management'}
+             activeMenu === 'employees' ? 'Employee Monitor' :
+             activeMenu === 'users' ? 'User Management' : 'Booking Management'}
           </h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <span style={{ color: '#64748b' }}>Admin: <b>{currentUser}</b></span>
-            <button onClick={handleLogout} style={styles.logoutBtn}>ออกจากระบบ</button>
+            <button onClick={handleLogout} style={styles.logoutBtn as React.CSSProperties}>ออกจากระบบ</button>
           </div>
         </header>
 
-        <main style={styles.contentScrollable}>
-          <div style={styles.innerContainer}>
+        <main style={styles.contentScrollable as React.CSSProperties}>
+          <div style={styles.innerContainer as React.CSSProperties}>
 
             {/* Dashboard Stats */}
             {activeMenu === 'dashboard' && (
-              <div style={styles.cardGrid}>
-                <div style={styles.card} onClick={() => setActiveMenu('users')}><div style={{ fontSize: '2.5rem', marginRight: '20px' }}>👥</div><div><p style={{ color: '#64748b', fontSize: '0.9rem' }}>สมาชิกทั้งหมด</p><h3 style={{ fontSize: '1.8rem', fontWeight: 'bold', margin: 0 }}>{users.length}</h3></div></div>
-                <div style={styles.card} onClick={() => setActiveMenu('employees')}><div style={{ fontSize: '2.5rem', marginRight: '20px' }}>👔</div><div><p style={{ color: '#64748b', fontSize: '0.9rem' }}>พนักงาน</p><h3 style={{ fontSize: '1.8rem', fontWeight: 'bold', margin: 0 }}>{staffList.length}</h3></div></div>
-                <div style={styles.card} onClick={() => setActiveMenu('bookings')}><div style={{ fontSize: '2.5rem', marginRight: '20px' }}>📅</div><div><p style={{ color: '#64748b', fontSize: '0.9rem' }}>รายการจองทั้งหมด</p><h3 style={{ fontSize: '1.8rem', fontWeight: 'bold', margin: 0 }}>{bookings.length}</h3></div></div>
+              <div style={styles.cardGrid as React.CSSProperties}>
+                <div style={styles.card as React.CSSProperties} onClick={() => setActiveMenu('users')}><div style={{ fontSize: '2.5rem', marginRight: '20px' }}>👥</div><div><p style={{ color: '#64748b', fontSize: '0.9rem' }}>สมาชิกทั้งหมด</p><h3 style={{ fontSize: '1.8rem', fontWeight: 'bold', margin: 0 }}>{users.length}</h3></div></div>
+                <div style={styles.card as React.CSSProperties} onClick={() => setActiveMenu('employees')}><div style={{ fontSize: '2.5rem', marginRight: '20px' }}>👔</div><div><p style={{ color: '#64748b', fontSize: '0.9rem' }}>พนักงาน</p><h3 style={{ fontSize: '1.8rem', fontWeight: 'bold', margin: 0 }}>{staffList.length}</h3></div></div>
+                <div style={styles.card as React.CSSProperties} onClick={() => setActiveMenu('bookings')}><div style={{ fontSize: '2.5rem', marginRight: '20px' }}>📅</div><div><p style={{ color: '#64748b', fontSize: '0.9rem' }}>รายการจองทั้งหมด</p><h3 style={{ fontSize: '1.8rem', fontWeight: 'bold', margin: 0 }}>{bookings.length}</h3></div></div>
               </div>
             )}
 
@@ -280,20 +317,20 @@ const AdminDashboard = ({ onLogout }) => {
                   <div style={{ color: '#64748b' }}>จำนวนช่าง: {staffList.length} คน</div>
                 </div>
 
-                <div style={styles.empGrid}>
+                <div style={styles.empGrid as React.CSSProperties}>
                   {staffList.length > 0 ? staffList.map(staff => {
                     const isBusy = staff.status === 'BUSY';
                     const activeJob = isBusy ? getActiveJobDetails(staff.id) : null;
 
                     return (
-                      <div key={staff.id} style={styles.empCard(isBusy)}>
-                        <span style={styles.statusTag(isBusy)}>{isBusy ? '● กำลังทำงาน' : '● ว่าง'}</span>
+                      <div key={staff.id} style={(styles.empCard as Function)(isBusy)}>
+                        <span style={(styles.statusTag as Function)(isBusy)}>{isBusy ? '● กำลังทำงาน' : '● ว่าง'}</span>
                         <div style={{ fontWeight: 'bold', fontSize: '1.1rem', marginTop: '5px' }}>{staff.username}</div>
                         <div style={{ fontSize: '0.9rem', color: '#64748b' }}>{staff.fullName || 'ไม่ระบุชื่อ'}</div>
                         <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '10px' }}>📞 {staff.phoneNumber || '-'}</div>
 
                         {isBusy && activeJob ? (
-                          <div style={styles.jobInfo}>
+                          <div style={styles.jobInfo as React.CSSProperties}>
                             <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>🛠️ กำลังให้บริการ:</div>
                             <div>ลูกค้า: {activeJob.customer?.username || 'Guest'}</div>
                             <div>บริการ: {activeJob.carwashCategory?.name || '-'}</div>
@@ -302,7 +339,7 @@ const AdminDashboard = ({ onLogout }) => {
                             </div>
                           </div>
                         ) : isBusy ? (
-                          <div style={styles.jobInfo}>ไม่พบข้อมูลงานปัจจุบัน</div>
+                          <div style={styles.jobInfo as React.CSSProperties}>ไม่พบข้อมูลงานปัจจุบัน</div>
                         ) : (
                           <div style={{ marginTop: '20px', textAlign: 'center', color: '#cbd5e1', fontSize: '2rem' }}>☕</div>
                         )}
@@ -317,10 +354,10 @@ const AdminDashboard = ({ onLogout }) => {
 
             {/* Users Table */}
             {(activeMenu === 'users' || activeMenu === 'dashboard') && (
-              <div style={styles.tableContainer}>
-                <div style={styles.tableHeaderContainer}>
-                  <div style={styles.tableTitle}>รายชื่อสมาชิกในระบบ</div>
-                  <select style={styles.filterSelect} value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
+              <div style={styles.tableContainer as React.CSSProperties}>
+                <div style={styles.tableHeaderContainer as React.CSSProperties}>
+                  <div style={styles.tableTitle as React.CSSProperties}>รายชื่อสมาชิกในระบบ</div>
+                  <select style={styles.filterSelect as React.CSSProperties} value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
                     <option value="ALL">ทั้งหมด (All Users)</option>
                     <option value="USER">ลูกค้า (Customer)</option>
                     <option value="STAFF">พนักงาน (Staff)</option>
@@ -328,32 +365,32 @@ const AdminDashboard = ({ onLogout }) => {
                   </select>
                 </div>
 
-                <table style={styles.table}>
+                <table style={styles.table as React.CSSProperties}>
                   <thead>
                     <tr>
-                      <th style={styles.th}>ID</th>
-                      <th style={styles.th}>Username</th>
-                      <th style={styles.th}>ชื่อ-สกุล</th>
-                      <th style={styles.th}>เบอร์โทร</th>
-                      <th style={styles.th}>สถานะ</th>
-                      <th style={styles.th}>Actions</th>
+                      <th style={styles.th as React.CSSProperties}>ID</th>
+                      <th style={styles.th as React.CSSProperties}>Username</th>
+                      <th style={styles.th as React.CSSProperties}>ชื่อ-สกุล</th>
+                      <th style={styles.th as React.CSSProperties}>เบอร์โทร</th>
+                      <th style={styles.th as React.CSSProperties}>สถานะ</th>
+                      <th style={styles.th as React.CSSProperties}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredUsers.map((user) => (
                       <tr key={user.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={styles.td}>#{user.id}</td>
-                        <td style={{ ...styles.td, fontWeight: 'bold' }}>{user.username}</td>
-                        <td style={styles.td}>{user.fullName || '-'}</td>
-                        <td style={styles.td}>{user.phoneNumber || '-'}</td>
-                        <td style={styles.td}><span style={styles.badge(user.role)}>{user.role}</span></td>
-                        <td style={styles.td}>
+                        <td style={styles.td as React.CSSProperties}>#{user.id}</td>
+                        <td style={{ ...(styles.td as React.CSSProperties), fontWeight: 'bold' }}>{user.username}</td>
+                        <td style={styles.td as React.CSSProperties}>{user.fullName || '-'}</td>
+                        <td style={styles.td as React.CSSProperties}>{user.phoneNumber || '-'}</td>
+                        <td style={styles.td as React.CSSProperties}><span style={(styles.badge as Function)(user.role)}>{user.role}</span></td>
+                        <td style={styles.td as React.CSSProperties}>
                           <button onClick={() => startEdit(user)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem', marginRight: '10px' }} title="แก้ไข">✏️</button>
                           <button onClick={() => handleDeleteUser(user.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem' }} title="ลบ">🗑️</button>
                         </td>
                       </tr>
                     ))}
-                    {filteredUsers.length === 0 && <tr><td colSpan="6" style={{ ...styles.td, textAlign: 'center' }}>ไม่พบข้อมูล</td></tr>}
+                    {filteredUsers.length === 0 && <tr><td colSpan={6} style={{ ...(styles.td as React.CSSProperties), textAlign: 'center' }}>ไม่พบข้อมูล</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -361,34 +398,31 @@ const AdminDashboard = ({ onLogout }) => {
 
             {/* Bookings Table */}
             {activeMenu === 'bookings' && (
-              <div style={styles.tableContainer}>
-                <div style={styles.tableHeaderContainer}>
-                  <div style={styles.tableTitle}>รายการจองคิวทั้งหมด</div>
+              <div style={styles.tableContainer as React.CSSProperties}>
+                <div style={styles.tableHeaderContainer as React.CSSProperties}>
+                  <div style={styles.tableTitle as React.CSSProperties}>รายการจองคิวทั้งหมด</div>
                 </div>
-                <table style={styles.table}>
+                <table style={styles.table as React.CSSProperties}>
                   <thead>
-                    {/* ✅ เพิ่มคอลัมน์ "จัดการ" */}
-                    <tr><th style={styles.th}>ID</th><th style={styles.th}>ลูกค้า</th><th style={styles.th}>บริการ</th><th style={styles.th}>ช่างผู้รับงาน</th><th style={styles.th}>เวลานัดหมาย</th><th style={styles.th}>สถานะ</th><th style={styles.th}>จัดการ</th></tr>
+                    <tr><th style={styles.th as React.CSSProperties}>ID</th><th style={styles.th as React.CSSProperties}>ลูกค้า</th><th style={styles.th as React.CSSProperties}>บริการ</th><th style={styles.th as React.CSSProperties}>ช่างผู้รับงาน</th><th style={styles.th as React.CSSProperties}>เวลานัดหมาย</th><th style={styles.th as React.CSSProperties}>สถานะ</th><th style={styles.th as React.CSSProperties}>จัดการ</th></tr>
                   </thead>
                   <tbody>
                     {bookings.map((booking) => (
                       <tr key={booking.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={styles.td}>#{booking.id}</td>
-                        <td style={styles.td}>{booking.customer ? booking.customer.username : 'Unknown'}</td>
-                        <td style={styles.td}>{booking.carwashCategory ? booking.carwashCategory.name : '-'}</td>
-                        <td style={{ ...styles.td, color: booking.assignedStaff ? '#2563eb' : '#94a3b8' }}>
+                        <td style={styles.td as React.CSSProperties}>#{booking.id}</td>
+                        <td style={styles.td as React.CSSProperties}>{booking.customer ? booking.customer.username : 'Unknown'}</td>
+                        <td style={styles.td as React.CSSProperties}>{booking.carwashCategory ? booking.carwashCategory.name : '-'}</td>
+                        <td style={{ ...(styles.td as React.CSSProperties), color: booking.assignedStaff ? '#2563eb' : '#94a3b8' }}>
                           {booking.assignedStaff ? booking.assignedStaff.username : 'รอจัดสรร'}
                         </td>
-                        <td style={styles.td}>{new Date(booking.startTime).toLocaleString('th-TH')}</td>
-                        <td style={styles.td}>
-                            {/* แต่งสีสถานะหน่อย */}
+                        <td style={styles.td as React.CSSProperties}>{new Date(booking.startTime).toLocaleString('th-TH')}</td>
+                        <td style={styles.td as React.CSSProperties}>
                             <span style={{padding:'4px 8px', borderRadius:'10px', background: booking.status==='COMPLETED'?'#dcfce7':'#fff7ed', color: booking.status==='COMPLETED'?'#166534':'#c2410c', fontSize:'0.8rem', fontWeight:'bold'}}>
                                 {booking.status}
                             </span>
                         </td>
-                        <td style={styles.td}>
-                            {/* ✅ ปุ่มกดดูรายละเอียด */}
-                            <button onClick={() => openBookingDetail(booking)} style={styles.detailBtn}>
+                        <td style={styles.td as React.CSSProperties}>
+                            <button onClick={() => openBookingDetail(booking)} style={styles.detailBtn as React.CSSProperties}>
                                 📝 รายละเอียด
                             </button>
                         </td>
@@ -404,43 +438,43 @@ const AdminDashboard = ({ onLogout }) => {
 
       {/* ✏️ MODAL แก้ไข USER */}
       {editingUser && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent}>
+        <div style={styles.modalOverlay as React.CSSProperties}>
+          <div style={styles.modalContent as React.CSSProperties}>
             <h3 style={{ marginBottom: '20px', color: '#1e293b' }}>✏️ แก้ไขข้อมูลสมาชิก</h3>
             <form onSubmit={handleSaveUser}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Username</label>
-                <input style={{ ...styles.input, backgroundColor: '#f1f5f9' }} name="username" value={editingUser.username} disabled />
+              <div style={styles.formGroup as React.CSSProperties}>
+                <label style={styles.label as React.CSSProperties}>Username</label>
+                <input style={{ ...(styles.input as React.CSSProperties), backgroundColor: '#f1f5f9' }} name="username" value={editingUser.username} disabled />
               </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>ชื่อ-สกุล</label>
-                <input style={styles.input} name="fullName" value={editingUser.fullName || ''} onChange={handleEditChange} />
+              <div style={styles.formGroup as React.CSSProperties}>
+                <label style={styles.label as React.CSSProperties}>ชื่อ-สกุล</label>
+                <input style={styles.input as React.CSSProperties} name="fullName" value={editingUser.fullName || ''} onChange={handleEditChange} />
               </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>เบอร์โทรศัพท์</label>
-                <input style={styles.input} name="phoneNumber" value={editingUser.phoneNumber || ''} onChange={handleEditChange} />
+              <div style={styles.formGroup as React.CSSProperties}>
+                <label style={styles.label as React.CSSProperties}>เบอร์โทรศัพท์</label>
+                <input style={styles.input as React.CSSProperties} name="phoneNumber" value={editingUser.phoneNumber || ''} onChange={handleEditChange} />
               </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>สถานะ (Role)</label>
-                <select style={styles.input} name="role" value={editingUser.role} onChange={handleEditChange}>
+              <div style={styles.formGroup as React.CSSProperties}>
+                <label style={styles.label as React.CSSProperties}>สถานะ (Role)</label>
+                <select style={styles.input as React.CSSProperties} name="role" value={editingUser.role} onChange={handleEditChange}>
                   <option value="USER">USER (ลูกค้า)</option>
                   <option value="STAFF">STAFF (พนักงาน)</option>
                   <option value="ADMIN">ADMIN (แอดมิน)</option>
                 </select>
               </div>
-              <div style={styles.modalActions}>
-                <button type="button" onClick={() => setEditingUser(null)} style={styles.cancelBtn}>ยกเลิก</button>
-                <button type="submit" style={styles.saveBtn}>บันทึก</button>
+              <div style={styles.modalActions as React.CSSProperties}>
+                <button type="button" onClick={() => setEditingUser(null)} style={styles.cancelBtn as React.CSSProperties}>ยกเลิก</button>
+                <button type="submit" style={styles.saveBtn as React.CSSProperties}>บันทึก</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* 📝 ✅ [NEW] MODAL จัดการ BOOKING (ดู/แก้/ลบ) */}
+      {/* 📝 MODAL จัดการ BOOKING */}
       {editingBooking && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent}>
+        <div style={styles.modalOverlay as React.CSSProperties}>
+          <div style={styles.modalContent as React.CSSProperties}>
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
                 <h3 style={{margin:0}}>📝 จัดการรายการจอง #{editingBooking.id}</h3>
                 <button onClick={() => setEditingBooking(null)} style={{background:'none', border:'none', fontSize:'1.5rem', cursor:'pointer'}}>×</button>
@@ -457,21 +491,21 @@ const AdminDashboard = ({ onLogout }) => {
               </div>
 
               {/* Editable Fields */}
-              <div style={styles.formGroup}>
-                <label style={styles.label}>ทะเบียนรถ</label>
+              <div style={styles.formGroup as React.CSSProperties}>
+                <label style={styles.label as React.CSSProperties}>ทะเบียนรถ</label>
                 <input 
-                    style={styles.input} 
+                    style={styles.input as React.CSSProperties} 
                     value={editingBooking.plateNumber || ''} 
                     onChange={(e) => setEditingBooking({...editingBooking, plateNumber: e.target.value})}
                 />
               </div>
 
-              <div style={styles.formGroup}>
-                <label style={styles.label}>สถานะงาน (Status)</label>
+              <div style={styles.formGroup as React.CSSProperties}>
+                <label style={styles.label as React.CSSProperties}>สถานะงาน (Status)</label>
                 <select 
-                    style={styles.input} 
+                    style={styles.input as React.CSSProperties} 
                     value={editingBooking.status} 
-                    onChange={(e) => setEditingBooking({...editingBooking, status: e.target.value})}
+                    onChange={(e) => setEditingBooking({...editingBooking, status: e.target.value as any})}
                 >
                     <option value="PENDING">PENDING (รอดำเนินการ)</option>
                     <option value="IN_PROGRESS">IN_PROGRESS (กำลังล้าง)</option>
@@ -480,10 +514,10 @@ const AdminDashboard = ({ onLogout }) => {
                 </select>
               </div>
 
-              <div style={styles.formGroup}>
-                <label style={styles.label}>ช่างผู้รับผิดชอบ (Assigned Staff)</label>
+              <div style={styles.formGroup as React.CSSProperties}>
+                <label style={styles.label as React.CSSProperties}>ช่างผู้รับผิดชอบ (Assigned Staff)</label>
                 <select 
-                    style={styles.input} 
+                    style={styles.input as React.CSSProperties} 
                     value={editingBooking.staffId || ''} 
                     onChange={(e) => setEditingBooking({...editingBooking, staffId: e.target.value})}
                 >
@@ -494,16 +528,16 @@ const AdminDashboard = ({ onLogout }) => {
                         </option>
                     ))}
                 </select>
-                <small style={{color:'#64748b', fontSize:'0.8rem'}}>* เลือกเพื่อเปลี่ยนคนรับงาน (ช่างต้องว่างสถานะ AVAILABLE จะดีที่สุด)</small>
+                <small style={{color:'#64748b', fontSize:'0.8rem'}}>* เลือกเพื่อเปลี่ยนคนรับงาน</small>
               </div>
 
               <div style={{display:'flex', justifyContent:'space-between', marginTop:'30px'}}>
-                 <button type="button" onClick={handleDeleteBooking} style={{...styles.cancelBtn, background:'#fee2e2', color:'#dc2626'}}>
+                 <button type="button" onClick={handleDeleteBooking} style={{...(styles.cancelBtn as React.CSSProperties), background:'#fee2e2', color:'#dc2626'}}>
                     🗑️ ลบรายการนี้
                  </button>
                  <div style={{display:'flex', gap:'10px'}}>
-                    <button type="button" onClick={() => setEditingBooking(null)} style={styles.cancelBtn}>ยกเลิก</button>
-                    <button type="submit" style={styles.saveBtn}>บันทึกการแก้ไข</button>
+                    <button type="button" onClick={() => setEditingBooking(null)} style={styles.cancelBtn as React.CSSProperties}>ยกเลิก</button>
+                    <button type="submit" style={styles.saveBtn as React.CSSProperties}>บันทึกการแก้ไข</button>
                  </div>
               </div>
             </form>

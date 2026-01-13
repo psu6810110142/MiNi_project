@@ -3,7 +3,7 @@
 import { Controller, Post, Body, UnauthorizedException, Get, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/user.service';
-import { AuthGuard } from '@nestjs/passport'; // ✅ 1. เพิ่ม import นี้
+import { AuthGuard } from '@nestjs/passport'; 
 
 @Controller('auth')
 export class AuthController {
@@ -12,7 +12,7 @@ export class AuthController {
     private readonly usersService: UsersService,
   ) {}
 
-  // ล็อกอิน (เหมือนเดิม)
+  // ล็อกอิน
   @Post('login')
   async login(@Body() body) {
     const user = await this.authService.validateUser(body.username, body.password);
@@ -22,7 +22,7 @@ export class AuthController {
     return this.authService.login(user);
   }
 
-  // สมัครสมาชิก (เหมือนเดิม)
+  // สมัครสมาชิก 
   @Post('register')
   async register(@Body() body) {
     const newUser = await this.usersService.create(body);
@@ -35,7 +35,7 @@ export class AuthController {
     }; 
   }
 
-  // 👇 3. เพิ่ม API สำหรับดึงข้อมูลส่วนตัว (Profile)
+  //เพิ่ม API สำหรับดึงข้อมูลส่วนตัว (Profile)
   @UseGuards(AuthGuard('jwt')) // ต้องมี Token ถึงจะเข้าได้
   @Get('profile')
   async getProfile(@Request() req) {

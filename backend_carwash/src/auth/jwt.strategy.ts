@@ -13,10 +13,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    // 🔥 1. แอบดูไส้ใน Token หน่อย (ดูที่ Terminal ตอนรัน)
+    // 1. แอบดูไส้ใน Token หน่อย (ดูที่ Terminal ตอนรัน)
     console.log("🔓 Decoded Payload:", payload);
 
-    // 🔥 2. ดักจับทุกชื่อที่เป็นไปได้ (sub, id, userId, user_id)
+    // 2. ดักจับทุกชื่อที่เป็นไปได้ (sub, id, userId, user_id)
     const id = payload.sub || payload.id || payload.userId || payload.user_id;
 
     if (!id) {
@@ -24,11 +24,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         throw new UnauthorizedException('Invalid Token Structure');
     }
 
-    // 🔥 3. ส่งคืน userId ที่ถูกต้อง
    return { 
         userId: id, 
         username: payload.username,
-        role: payload.role // 👈 บรรทัดนี้สำคัญมาก! ยามต้องใช้ตรวจ
+        role: payload.role 
     };
   }
 }

@@ -1,16 +1,33 @@
+// src/pages/Loginpage.tsx
+
 import React, { useState } from 'react';
 import { User, Lock, ChevronLeft, LogIn, Sparkles } from 'lucide-react';
-import { jwtDecode } from 'jwt-decode'; // ✅ เพิ่ม: เพื่อเช็ค Role ก่อนเปลี่ยนหน้า
-import { useAuth } from '../context/AuthContext'; // ✅ เพิ่ม: เรียกใช้ Context
+import { jwtDecode } from 'jwt-decode'; 
+import { useAuth } from '../context/AuthContext'; 
 
-const Login = ({ onBack, onLoginSuccess }) => { // onLoginSuccess อาจจะเป็น function ที่จัดการ navigate ใน App.js
+// ✅ 1. กำหนด Type ของ Props ที่รับเข้ามา
+interface LoginProps {
+  onBack: () => void;
+  onLoginSuccess: (username: string, role: string) => void;
+}
+
+// ✅ 2. กำหนดหน้าตาของ Token หลังจาก Decode แล้ว
+interface DecodedToken {
+  username: string;
+  role: string;
+  // อาจจะมี field อื่นๆ เช่น sub, iat, exp ใส่เผื่อไว้ได้
+  [key: string]: any; 
+}
+
+const Login: React.FC<LoginProps> = ({ onBack, onLoginSuccess }) => { 
   const [credentials, setCredentials] = useState({ username: '', password: '' });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
   
-  const { login } = useAuth(); // ✅ ดึงฟังก์ชัน login จาก Context มาใช้
+  const { login } = useAuth(); 
 
-  const handleSubmit = async (e) => {
+  // ✅ 3. ใส่ Type ให้ event (e)
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
@@ -22,7 +39,6 @@ const Login = ({ onBack, onLoginSuccess }) => { // onLoginSuccess อาจจ�
     setLoading(true);
 
     try {
-        // ยิง API
         const response = await fetch('http://localhost:3001/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -35,14 +51,12 @@ const Login = ({ onBack, onLoginSuccess }) => { // onLoginSuccess อาจจ�
             const token = data.access_token || data.token;
             
             if (token) {
-                // ✅ 1. ส่ง Token เข้า Context (Context จะจัดการ save ลง storage และ update state ให้)
                 login(token);
 
-                // ✅ 2. แกะ Token เพื่อดู Role สำหรับการ Redirect (Optional: ทำตรงนี้หรือทำใน onLoginSuccess ก็ได้)
-                const decoded = jwtDecode(token);
+                // ✅ 4. บอก Type ตอน Decode ว่ามันคือ DecodedToken นะ
+                const decoded = jwtDecode<DecodedToken>(token);
                 console.log("TOKEN DECODED:", decoded);
                 
-                // ส่งทั้ง username และ role กลับไปให้ App ตัวแม่จัดการต่อ
                 onLoginSuccess(decoded.username, decoded.role); 
             } else {
                 setError('ไม่พบ Token ในการตอบกลับ');
@@ -59,12 +73,8 @@ const Login = ({ onBack, onLoginSuccess }) => { // onLoginSuccess อาจจ�
     }
   };
 
-  // ... ส่วน JSX เหมือนเดิมเป๊ะ ...
   return (
     <div className="login-wrapper">
-       {/* ... (Style และ HTML เหมือนเดิมที่คุณเขียนมา) ... */}
-       {/* แค่ใส่ useAuth กับ logic handleSubmit ใหม่ข้างบนก็พอครับ */}
-       
        <style>{`
         .login-wrapper { min-height: 100vh; background-color: #f8fafc; font-family: 'Prompt', sans-serif; }
         .login-header { padding: 20px; display: flex; align-items: center; justify-content: space-between; }

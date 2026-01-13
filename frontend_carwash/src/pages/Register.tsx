@@ -1,24 +1,43 @@
+// src/pages/Register.tsx
+
 import React, { useState } from 'react';
 import { User, Lock, Phone, UserPlus, ChevronLeft, Sparkles } from 'lucide-react';
 
-const Register = ({ onBack }) => {
-  const [formData, setFormData] = useState({
+// ✅ 1. กำหนด Type ของ Props
+interface RegisterProps {
+  onBack: () => void;
+}
+
+// ✅ 2. กำหนด Type ของข้อมูลใน Form
+interface RegisterFormData {
+  username: string;
+  password: string;
+  confirmPassword: string;
+  fullName: string;
+  tel: string;
+}
+
+const Register: React.FC<RegisterProps> = ({ onBack }) => {
+  // ✅ 3. ใช้ Type ที่สร้างไว้กับ useState
+  const [formData, setFormData] = useState<RegisterFormData>({
     username: '',
     password: '',
     confirmPassword: '',
     fullName: '',
     tel: ''
   });
-  const [isLoading, setIsLoading] = useState(false); // เพิ่มสถานะ Loading
+  
+  const [isLoading, setIsLoading] = useState<boolean>(false); 
 
-  const handleChange = (e) => {
+  // ✅ 4. ใส่ Type ให้ event ของการเปลี่ยนค่า input
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  // ✅ 5. ใส่ Type ให้ event ของการ Submit
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 1. เช็ครหัสผ่าน
     if (formData.password !== formData.confirmPassword) {
       alert("รหัสผ่านไม่ตรงกันครับ");
       return;
@@ -27,15 +46,13 @@ const Register = ({ onBack }) => {
     setIsLoading(true);
 
     try {
-        // 2. เตรียมข้อมูล (ต้องตรงกับที่ Postman ส่งเป๊ะๆ)
         const payload = {
             username: formData.username,
             password: formData.password,
-            fullName: formData.fullName, // เช็คว่า Backend ใช้ key นี้ไหม?
-            tel: formData.tel            // เช็คว่า Backend ใช้ key นี้ไหม?
+            fullName: formData.fullName, 
+            tel: formData.tel           
         };
 
-        // 3. ยิง API (แก้ URL ตามของคุณ)
         const response = await fetch('http://localhost:3001/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -46,9 +63,8 @@ const Register = ({ onBack }) => {
 
         if (response.ok) {
             alert("✅ สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ");
-            onBack(); // กลับไปหน้า Login
+            onBack(); 
         } else {
-            // ถ้า Error (เช่น ชื่อซ้ำ)
             alert(`❌ สมัครไม่ผ่าน: ${data.message || 'เกิดข้อผิดพลาด'}`);
         }
 
@@ -60,12 +76,9 @@ const Register = ({ onBack }) => {
     }
   };
 
-  // ... (ส่วน return เหมือนเดิม แต่ปุ่ม Submit จะ disable ตอนโหลด) ...
   return (
     <div className="register-wrapper">
-      {/* ... (Style เดิม) ... */}
       <style>{`
-        /* ... (Copy CSS เดิมมาใส่ตรงนี้ หรือใช้ของเก่าก็ได้ครับ) ... */
         .register-wrapper { min-height: 100vh; background-color: #f8fafc; font-family: 'Prompt', sans-serif; padding-bottom: 40px; }
         .reg-header { background: white; padding: 20px; position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
         .btn-back-icon { background: #f1f5f9; border: none; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #334155; cursor: pointer; transition: 0.2s; }
@@ -100,7 +113,7 @@ const Register = ({ onBack }) => {
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* Form Fields (เหมือนเดิม) */}
+          {/* Form Fields */}
           <div className="reg-form-group">
             <label className="reg-label">ชื่อ-นามสกุล</label>
             <div className="reg-input-wrapper">

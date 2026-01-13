@@ -10,14 +10,14 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  // 1. ตรวจสอบว่า Username/Password ถูกต้องไหม
+  //ตรวจสอบว่า Username/Password ถูกต้องไหม
   async validateUser(username: string, pass: string): Promise<any> {
     const user = await this.usersService.findOne(username);
 
     // ถ้าหา User ไม่เจอ
     if (!user) return null;
 
-    // ✅ เช็คว่ารหัสผ่านตรงกันไหม (เทียบระหว่างที่พิมพ์มา vs ค่า Hash ใน DB)
+    // เช็คว่ารหัสผ่านตรงกันไหม (เทียบระหว่างที่พิมพ์มา vs ค่า Hash ใน DB)
     const isMatch = await bcrypt.compare(pass, user.password);
 
     if (isMatch) {
